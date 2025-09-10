@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -28,12 +28,27 @@ const Auth = () => {
   const handleSignIn = async () => {
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        if (error.message?.toLowerCase().includes("confirm")) {
+          toast({
+            title: "Email confirmation required",
+            description: "Disable 'Confirm email' in Supabase Auth settings to allow direct sign in.",
+          });
+          return;
+        }
+        throw error;
+      }
+
+      if (data.user?.id) {
+        // Ensure a profile exists for the user
+        await supabase.from("profiles").upsert({ id: data.user.id });
+      }
+
       toast({ title: "Signed in", description: "Welcome back!" });
       navigate("/dashboard");
     } catch (err: any) {
-      toast({ title: "Sign in failed", description: err.message });
+      toast({ title: "Sign in failed", description: err.message ?? "Please try again." });
     } finally {
       setLoading(false);
     }
@@ -47,20 +62,55 @@ const Auth = () => {
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            email_confirm: false
-          }
-        }
+        },
       });
-      if (error) throw error;
-      
-      // If signup is successful, automatically sign in
-      if (data.user) {
+      if (error) {
+        const msg = String(error.message || "").toLowerCase();
+        if (msg.includes("already") || msg.includes("exists")) {
+          toast({ title: "Email already registered", description: "Try signing in instead." });
+          return;
+        }
+        throw error;
+      }
+
+      // If email confirmation is disabled, session is returned here
+      if (data.session?.user) {
+        await supabase.from("profiles").upsert({
+          id: data.session.user.id,
+          full_name: email.split("@")[0],
+        });
         toast({ title: "Account created", description: "You're now signed in!" });
         navigate("/dashboard");
+        return;
       }
+
+      // If confirmation is still enabled, try to sign in immediately
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (signInError) {
+        if (signInError.message?.toLowerCase().includes("confirm")) {
+          toast({
+            title: "Email confirmation required",
+            description: "Disable 'Confirm email' in Supabase Auth settings to sign in without verification.",
+          });
+          return;
+        }
+        throw signInError;
+      }
+
+      if (signInData.user?.id) {
+        await supabase.from("profiles").upsert({
+          id: signInData.user.id,
+          full_name: email.split("@")[0],
+        });
+      }
+
+      toast({ title: "Account created", description: "You're now signed in!" });
+      navigate("/dashboard");
     } catch (err: any) {
-      toast({ title: "Sign up failed", description: err.message });
+      toast({ title: "Sign up failed", description: err.message ?? "Please try again." });
     } finally {
       setLoading(false);
     }
