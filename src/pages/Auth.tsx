@@ -42,14 +42,23 @@ const Auth = () => {
   const handleSignUp = async () => {
     try {
       setLoading(true);
-      const redirectUrl = `${window.location.origin}/`;
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: redirectUrl }
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            email_confirm: false
+          }
+        }
       });
       if (error) throw error;
-      toast({ title: "Verify your email", description: "Check your inbox to confirm sign up." });
+      
+      // If signup is successful, automatically sign in
+      if (data.user) {
+        toast({ title: "Account created", description: "You're now signed in!" });
+        navigate("/dashboard");
+      }
     } catch (err: any) {
       toast({ title: "Sign up failed", description: err.message });
     } finally {
@@ -93,7 +102,7 @@ const Auth = () => {
                   <Input id="password2" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="********" />
                 </div>
                 <Button className="w-full" disabled={loading} onClick={handleSignUp}>Create Account</Button>
-                <p className="text-xs text-muted-foreground">We'll send you a confirmation link to verify your email.</p>
+                <p className="text-xs text-muted-foreground">Your account will be created instantly.</p>
               </div>
             </TabsContent>
           </Tabs>
