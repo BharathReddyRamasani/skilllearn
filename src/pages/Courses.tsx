@@ -22,8 +22,25 @@ import {
   BarChart3
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const Courses = () => {
+  const [dbCourses, setDbCourses] = useState<any[]>([]);
+  const [loadingDb, setLoadingDb] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase.from('courses').select('*').order('created_at', { ascending: true });
+      if (error) {
+        console.log('Failed to load courses from DB:', error.message);
+      }
+      setDbCourses(data || []);
+      setLoadingDb(false);
+    })();
+  }, []);
+
   const categories = [
     { name: "All Courses", count: 24, active: true },
     { name: "Frontend", count: 8, active: false },
@@ -160,6 +177,32 @@ const Courses = () => {
           <p className="text-muted-foreground">
             Comprehensive B.Tech courses designed for placement readiness
           </p>
+        </div>
+
+        {/* Courses from Database */}
+        <div className="mb-12">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-semibold">Available Courses</h2>
+          </div>
+          {loadingDb ? (
+            <p className="text-muted-foreground">Loading from database...</p>
+          ) : dbCourses.length === 0 ? (
+            <Card className="p-6"><p className="text-muted-foreground">No courses available yet.</p></Card>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {dbCourses.map((c) => (
+                <Card key={c.id} className="learning-card p-6">
+                  <h3 className="text-lg font-semibold mb-2">{c.title}</h3>
+                  <p className="text-sm text-muted-foreground mb-4">{c.description}</p>
+                  <Link to={`/courses/${c.id}`}>
+                    <Button className="w-full hero-gradient text-white">
+                      View Modules
+                    </Button>
+                  </Link>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* My Learning Section */}
