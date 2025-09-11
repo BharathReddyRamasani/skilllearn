@@ -92,14 +92,9 @@ const Navigation = () => {
           {/* User Actions */}
           <div className="hidden md:flex items-center space-x-2">
             {isAuthed ? (
-              <>
-                <Button variant="outline" size="sm" onClick={() => navigate('/dashboard')}>
-                  Dashboard
-                </Button>
-                <Button size="sm" onClick={handleSignOut}>
-                  Logout
-                </Button>
-              </>
+              <Button size="sm" onClick={handleSignOut}>
+                Logout
+              </Button>
             ) : (
               <>
                 <Button variant="outline" size="sm" onClick={() => navigate('/auth')}>
@@ -145,14 +140,9 @@ const Navigation = () => {
               ))}
               <div className="pt-4 border-t border-border space-y-2">
                 {isAuthed ? (
-                  <>
-                    <Button variant="outline" size="sm" className="w-full" onClick={() => { setIsOpen(false); navigate('/dashboard'); }}>
-                      Dashboard
-                    </Button>
-                    <Button size="sm" className="w-full" onClick={() => { setIsOpen(false); handleSignOut(); }}>
-                      Logout
-                    </Button>
-                  </>
+                  <Button size="sm" className="w-full" onClick={() => { setIsOpen(false); handleSignOut(); }}>
+                    Logout
+                  </Button>
                 ) : (
                   <>
                     <Button variant="outline" size="sm" className="w-full" onClick={() => { setIsOpen(false); navigate('/auth'); }}>
