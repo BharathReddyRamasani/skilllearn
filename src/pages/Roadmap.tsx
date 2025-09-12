@@ -15,75 +15,49 @@ import {
   Users,
   Trophy,
   Calendar,
-  Zap
+  Zap,
+  Loader2
 } from "lucide-react";
+import { usePersonalizedData } from "@/hooks/usePersonalizedData";
 
 const Roadmap = () => {
-  const roadmapData = {
-    title: "Full Stack Developer + ML Engineer",
-    targetRole: "Senior Software Engineer at FAANG",
-    timeline: "6 Months",
-    currentWeek: 8,
-    totalWeeks: 24,
-    progress: 33
-  };
+  const { 
+    user, 
+    userStats, 
+    roadmapWeeks, 
+    goals,
+    loading, 
+    generatePersonalizedRoadmap 
+  } = usePersonalizedData();
 
-  const weeks = [
-    {
-      week: 1,
-      title: "JavaScript Fundamentals",
-      status: "completed",
-      topics: ["ES6+ Features", "Async Programming", "DOM Manipulation"],
-      timeSpent: "12 hours",
-      resources: 3
-    },
-    {
-      week: 2,
-      title: "React.js Mastery",
-      status: "completed", 
-      topics: ["Components & Props", "State Management", "Hooks Deep Dive"],
-      timeSpent: "15 hours",
-      resources: 4
-    },
-    {
-      week: 3,
-      title: "Node.js & Express",
-      status: "completed",
-      topics: ["Server Setup", "REST APIs", "Middleware"],
-      timeSpent: "14 hours", 
-      resources: 3
-    },
-    {
-      week: 4,
-      title: "Database Design",
-      status: "current",
-      topics: ["MongoDB Fundamentals", "Schema Design", "Aggregation"],
-      timeSpent: "8 hours",
-      resources: 5
-    },
-    {
-      week: 5,
-      title: "Authentication & Security", 
-      status: "upcoming",
-      topics: ["JWT Implementation", "OAuth 2.0", "Security Best Practices"],
-      timeSpent: "0 hours",
-      resources: 4
-    },
-    {
-      week: 6,
-      title: "Testing & Deployment",
-      status: "upcoming",
-      topics: ["Unit Testing", "Integration Tests", "CI/CD Pipelines"], 
-      timeSpent: "0 hours",
-      resources: 6
-    }
-  ];
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
-  const skillGaps = [
-    { skill: "System Design", importance: "Critical", timeline: "Week 12-14" },
-    { skill: "Docker & Kubernetes", importance: "High", timeline: "Week 16-17" },
-    { skill: "Machine Learning", importance: "Medium", timeline: "Week 18-20" }
-  ];
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="max-w-4xl mx-auto px-4 py-8 text-center">
+          <h1 className="text-2xl font-semibold mb-4">Welcome to LearnSphere!</h1>
+          <p className="text-muted-foreground">Please sign in to view your personalized roadmap.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const hasRoadmap = roadmapWeeks?.length > 0;
+  const currentGoal = goals?.length > 0 ? goals[0] : null;
+  const placementReadiness = userStats?.placement_readiness || 0;
+  
+  // Calculate progress based on completed weeks
+  const completedWeeks = roadmapWeeks?.filter(week => week.status === 'completed').length || 0;
+  const totalWeeks = roadmapWeeks?.length || 12;
+  const progress = totalWeeks > 0 ? (completedWeeks / totalWeeks) * 100 : 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -102,9 +76,12 @@ const Roadmap = () => {
                 Personalized learning path powered by advanced AI algorithms
               </p>
             </div>
-            <Button className="hero-gradient text-white shadow-primary">
+            <Button 
+              className="hero-gradient text-white shadow-primary"
+              onClick={generatePersonalizedRoadmap}
+            >
               <Sparkles className="w-4 h-4 mr-2" />
-              Regenerate Roadmap
+              {hasRoadmap ? 'Regenerate Roadmap' : 'Generate Roadmap'}
             </Button>
           </div>
         </div>
@@ -115,26 +92,30 @@ const Roadmap = () => {
             <Card className="learning-card p-6 hero-gradient text-white">
               <div className="text-center">
                 <Target className="w-12 h-12 mx-auto mb-4 ai-pulse" />
-                <h2 className="text-xl font-bold mb-2">{roadmapData.title}</h2>
-                <p className="text-white/90 mb-4">{roadmapData.targetRole}</p>
+                <h2 className="text-xl font-bold mb-2">
+                  {currentGoal?.title || 'Personalized Career Path'}
+                </h2>
+                <p className="text-white/90 mb-4">
+                  {currentGoal?.description || 'AI-Generated Learning Journey'}
+                </p>
                 
                 <div className="space-y-4">
                   <div>
                     <div className="flex justify-between text-sm mb-2">
                       <span>Progress</span>
-                      <span>Week {roadmapData.currentWeek} of {roadmapData.totalWeeks}</span>
+                      <span>Week {completedWeeks + 1} of {totalWeeks}</span>
                     </div>
-                    <Progress value={roadmapData.progress} className="bg-white/20" />
+                    <Progress value={progress} className="bg-white/20" />
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4 text-center">
                     <div>
-                      <div className="text-2xl font-bold stats-counter">{roadmapData.progress}%</div>
+                      <div className="text-2xl font-bold stats-counter">{Math.round(progress)}%</div>
                       <div className="text-xs text-white/80">Complete</div>
                     </div>
                     <div>
-                      <div className="text-2xl font-bold stats-counter">{roadmapData.timeline}</div>
-                      <div className="text-xs text-white/80">Timeline</div>
+                      <div className="text-2xl font-bold stats-counter">{placementReadiness}%</div>
+                      <div className="text-xs text-white/80">Readiness</div>
                     </div>
                   </div>
                 </div>
@@ -171,22 +152,35 @@ const Roadmap = () => {
 
             {/* Critical Skills */}
             <Card className="learning-card p-6">
-              <h3 className="text-lg font-semibold mb-4">Critical Skill Gaps</h3>
+              <h3 className="text-lg font-semibold mb-4">Learning Path Status</h3>
               <div className="space-y-3">
-                {skillGaps.map((gap, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                    <div>
-                      <p className="font-medium text-sm">{gap.skill}</p>
-                      <p className="text-xs text-muted-foreground">{gap.timeline}</p>
+                {hasRoadmap ? (
+                  <>
+                    <div className="flex items-center justify-between p-3 bg-success/10 rounded-lg">
+                      <div>
+                        <p className="font-medium text-sm">Active Roadmap</p>
+                        <p className="text-xs text-muted-foreground">{totalWeeks} weeks planned</p>
+                      </div>
+                      <Badge variant="default">Active</Badge>
                     </div>
-                    <Badge variant={
-                      gap.importance === 'Critical' ? 'destructive' :
-                      gap.importance === 'High' ? 'default' : 'secondary'
-                    }>
-                      {gap.importance}
-                    </Badge>
+                    <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg">
+                      <div>
+                        <p className="font-medium text-sm">Placement Readiness</p>
+                        <p className="text-xs text-muted-foreground">Current score: {placementReadiness}%</p>
+                      </div>
+                      <Badge variant={placementReadiness > 70 ? "default" : "secondary"}>
+                        {placementReadiness > 70 ? "Good" : "Developing"}
+                      </Badge>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-4">
+                    <Brain className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">
+                      Generate your AI-powered roadmap to start learning!
+                    </p>
                   </div>
-                ))}
+                )}
               </div>
             </Card>
           </div>
@@ -204,93 +198,123 @@ const Roadmap = () => {
                 </div>
               </div>
 
-              <div className="space-y-6">
-                {weeks.map((week, index) => (
-                  <div key={week.week} className={`relative pl-8 pb-6 ${
-                    index < weeks.length - 1 ? 'border-l-2 border-muted' : ''
-                  }`}>
-                    {/* Timeline dot */}
-                    <div className={`absolute -left-2 w-4 h-4 rounded-full border-2 ${
-                      week.status === 'completed' 
-                        ? 'bg-success border-success' 
-                        : week.status === 'current'
-                        ? 'bg-primary border-primary animate-pulse'
-                        : 'bg-background border-muted'
+              {hasRoadmap ? (
+                <div className="space-y-6">
+                  {roadmapWeeks.map((week, index) => (
+                    <div key={week.id} className={`relative pl-8 pb-6 ${
+                      index < roadmapWeeks.length - 1 ? 'border-l-2 border-muted' : ''
                     }`}>
-                      {week.status === 'completed' && (
-                        <CheckCircle className="w-3 h-3 text-white absolute -top-0.5 -left-0.5" />
-                      )}
-                    </div>
-
-                    <div className={`p-4 rounded-lg border-2 transition-all ${
-                      week.status === 'current' 
-                        ? 'border-primary bg-primary/5 shadow-primary' 
-                        : week.status === 'completed'
-                        ? 'border-success/30 bg-success/5'
-                        : 'border-border bg-muted/30'
-                    }`}>
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <div className="flex items-center space-x-3 mb-2">
-                            <h3 className="text-lg font-semibold">
-                              Week {week.week}: {week.title}
-                            </h3>
-                            <Badge variant={
-                              week.status === 'completed' ? 'default' :
-                              week.status === 'current' ? 'secondary' : 'outline'
-                            }>
-                              {week.status === 'completed' ? 'Completed' :
-                               week.status === 'current' ? 'In Progress' : 'Upcoming'}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                            <div className="flex items-center">
-                              <Clock className="w-4 h-4 mr-1" />
-                              {week.timeSpent}
-                            </div>
-                            <div className="flex items-center">
-                              <BookOpen className="w-4 h-4 mr-1" />
-                              {week.resources} resources
-                            </div>
-                          </div>
-                        </div>
-                        {week.status === 'current' && (
-                          <Button size="sm" className="hero-gradient text-white">
-                            Continue
-                            <ArrowRight className="w-4 h-4 ml-2" />
-                          </Button>
+                      {/* Timeline dot */}
+                      <div className={`absolute -left-2 w-4 h-4 rounded-full border-2 ${
+                        week.status === 'completed' 
+                          ? 'bg-success border-success' 
+                          : week.status === 'current'
+                          ? 'bg-primary border-primary animate-pulse'
+                          : 'bg-background border-muted'
+                      }`}>
+                        {week.status === 'completed' && (
+                          <CheckCircle className="w-3 h-3 text-white absolute -top-0.5 -left-0.5" />
                         )}
                       </div>
 
-                      <div className="grid md:grid-cols-3 gap-2">
-                        {week.topics.map((topic, topicIndex) => (
-                          <div key={topicIndex} className={`p-2 rounded text-sm ${
-                            week.status === 'completed' 
-                              ? 'bg-success/10 text-success-foreground' 
-                              : week.status === 'current'
-                              ? 'bg-primary/10 text-primary-foreground'
-                              : 'bg-muted/50 text-muted-foreground'
-                          }`}>
-                            {topic}
+                      <div className={`p-4 rounded-lg border-2 transition-all ${
+                        week.status === 'current' 
+                          ? 'border-primary bg-primary/5 shadow-primary' 
+                          : week.status === 'completed'
+                          ? 'border-success/30 bg-success/5'
+                          : 'border-border bg-muted/30'
+                      }`}>
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <div className="flex items-center space-x-3 mb-2">
+                              <h3 className="text-lg font-semibold">
+                                Week {week.week_number}: {week.title}
+                              </h3>
+                              <Badge variant={
+                                week.status === 'completed' ? 'default' :
+                                week.status === 'current' ? 'secondary' : 'outline'
+                              }>
+                                {week.status === 'completed' ? 'Completed' :
+                                 week.status === 'current' ? 'In Progress' : 'Upcoming'}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                              <div className="flex items-center">
+                                <Clock className="w-4 h-4 mr-1" />
+                                {week.estimated_hours} hours
+                              </div>
+                              <div className="flex items-center">
+                                <BookOpen className="w-4 h-4 mr-1" />
+                                {week.topics?.length || 0} topics
+                              </div>
+                            </div>
                           </div>
-                        ))}
-                      </div>
-
-                      {week.status === 'current' && (
-                        <div className="mt-4 p-3 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg">
-                          <div className="flex items-center space-x-2">
-                            <Brain className="w-5 h-5 text-primary" />
-                            <p className="text-sm">
-                              <strong>AI Tip:</strong> Focus on practical projects this week. 
-                              Building a CRUD app will solidify these database concepts.
-                            </p>
-                          </div>
+                          {week.status === 'current' && (
+                            <Button size="sm" className="hero-gradient text-white">
+                              Continue
+                              <ArrowRight className="w-4 h-4 ml-2" />
+                            </Button>
+                          )}
                         </div>
-                      )}
+
+                        <p className="text-sm text-muted-foreground mb-3">{week.description}</p>
+
+                        {week.topics && week.topics.length > 0 && (
+                          <div className="grid md:grid-cols-3 gap-2 mb-3">
+                            {week.topics.map((topic: string, topicIndex: number) => (
+                              <div key={topicIndex} className={`p-2 rounded text-sm ${
+                                week.status === 'completed' 
+                                  ? 'bg-success/10 text-success-foreground' 
+                                  : week.status === 'current'
+                                  ? 'bg-primary/10 text-primary-foreground'
+                                  : 'bg-muted/50 text-muted-foreground'
+                              }`}>
+                                {topic}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {week.skills_focus && week.skills_focus.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mb-3">
+                            {week.skills_focus.map((skill: string, skillIndex: number) => (
+                              <Badge key={skillIndex} variant="outline" className="text-xs">
+                                {skill}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+
+                        {week.status === 'current' && (
+                          <div className="mt-4 p-3 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg">
+                            <div className="flex items-center space-x-2">
+                              <Brain className="w-5 h-5 text-primary" />
+                              <p className="text-sm">
+                                <strong>AI Tip:</strong> Focus on {week.skills_focus?.[0] || 'practical projects'} this week for maximum learning impact.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Brain className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-xl font-semibold mb-2">No Roadmap Yet</h3>
+                  <p className="text-muted-foreground mb-6">
+                    Generate your personalized AI roadmap to start your learning journey!
+                  </p>
+                  <Button 
+                    className="hero-gradient text-white"
+                    onClick={generatePersonalizedRoadmap}
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generate My Roadmap
+                  </Button>
+                </div>
+              )}
 
               <div className="mt-8 p-6 hero-gradient rounded-lg text-white text-center">
                 <Trophy className="w-12 h-12 mx-auto mb-4 ai-pulse" />

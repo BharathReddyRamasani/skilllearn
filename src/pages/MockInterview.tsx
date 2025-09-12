@@ -18,10 +18,44 @@ import {
   Star,
   Users,
   TrendingUp,
-  Zap
+  Zap,
+  Loader2
 } from "lucide-react";
+import { usePersonalizedData } from "@/hooks/usePersonalizedData";
 
 const MockInterview = () => {
+  const { 
+    user, 
+    userStats, 
+    skills,
+    interviewSessions,
+    loading 
+  } = usePersonalizedData();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="max-w-4xl mx-auto px-4 py-8 text-center">
+          <h1 className="text-2xl font-semibold mb-4">Welcome to LearnSphere!</h1>
+          <p className="text-muted-foreground">Please sign in to access mock interviews.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const averageScore = interviewSessions?.length > 0 
+    ? Math.round(interviewSessions.reduce((sum, session) => sum + session.overall_score, 0) / interviewSessions.length)
+    : 0;
+  const totalSessions = interviewSessions?.length || 0;
   const interviewTypes = [
     {
       id: 1,
@@ -218,61 +252,68 @@ const MockInterview = () => {
             {/* Recent Sessions */}
             <div>
               <h2 className="text-2xl font-semibold mb-6">Recent Interview Sessions</h2>
-              <div className="space-y-4">
-                {recentSessions.map((session) => (
-                  <Card key={session.id} className="learning-card p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <div className="flex items-center space-x-3 mb-2">
-                          <h3 className="text-lg font-semibold">{session.type} Interview</h3>
-                          <Badge variant="outline">{session.date}</Badge>
+              {interviewSessions?.length > 0 ? (
+                <div className="space-y-4">
+                  {interviewSessions.slice(0, 3).map((session) => (
+                    <Card key={session.id} className="learning-card p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <div className="flex items-center space-x-3 mb-2">
+                            <h3 className="text-lg font-semibold">{session.interview_type} Interview</h3>
+                            <Badge variant="outline">{new Date(session.completed_at).toLocaleDateString()}</Badge>
+                          </div>
+                          <p className="text-muted-foreground">{session.feedback}</p>
                         </div>
-                        <p className="text-muted-foreground">{session.feedback}</p>
-                      </div>
-                      <div className="text-right">
-                        <div className={`text-3xl font-bold stats-counter ${getScoreColor(session.score)}`}>
-                          {session.score}%
+                        <div className="text-right">
+                          <div className={`text-3xl font-bold stats-counter ${getScoreColor(session.overall_score)}`}>
+                            {session.overall_score}%
+                          </div>
+                          <div className="text-xs text-muted-foreground">Overall Score</div>
                         </div>
-                        <div className="text-xs text-muted-foreground">Overall Score</div>
                       </div>
-                    </div>
 
-                    <div className="grid md:grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <h4 className="font-medium text-success mb-2 flex items-center">
-                          <CheckCircle className="w-4 h-4 mr-1" />
-                          Strengths
-                        </h4>
-                        <ul className="text-sm text-muted-foreground space-y-1">
-                          {session.strengths.map((strength, index) => (
-                            <li key={index}>• {strength}</li>
-                          ))}
-                        </ul>
+                      <div className="grid md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                          <h4 className="font-medium text-success mb-2 flex items-center">
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Strengths
+                          </h4>
+                          <ul className="text-sm text-muted-foreground space-y-1">
+                            {session.strengths?.map((strength, index) => (
+                              <li key={index}>• {strength}</li>
+                            )) || <li>Great overall performance</li>}
+                          </ul>
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-destructive mb-2 flex items-center">
+                            <AlertCircle className="w-4 h-4 mr-1" />
+                            Areas to Improve
+                          </h4>
+                          <ul className="text-sm text-muted-foreground space-y-1">
+                            {session.improvements?.map((improvement, index) => (
+                              <li key={index}>• {improvement}</li>
+                            )) || <li>Continue practicing regularly</li>}
+                          </ul>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="font-medium text-destructive mb-2 flex items-center">
-                          <AlertCircle className="w-4 h-4 mr-1" />
-                          Areas to Improve
-                        </h4>
-                        <ul className="text-sm text-muted-foreground space-y-1">
-                          {session.improvements.map((improvement, index) => (
-                            <li key={index}>• {improvement}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
 
-                    <div className="flex items-center justify-between pt-4 border-t border-border">
-                      <div className="text-sm text-muted-foreground">
-                        Duration: {session.duration}
+                      <div className="flex items-center justify-between pt-4 border-t border-border">
+                        <div className="text-sm text-muted-foreground">
+                          Duration: {session.duration_minutes} minutes
+                        </div>
+                        <Button variant="outline" size="sm">
+                          View Detailed Report
+                        </Button>
                       </div>
-                      <Button variant="outline" size="sm">
-                        View Detailed Report
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
-              </div>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <MessageSquare className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground">No interview sessions yet. Start practicing to improve your skills!</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -286,11 +327,11 @@ const MockInterview = () => {
                 
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <div className="text-2xl font-bold stats-counter">{performanceMetrics.averageScore}%</div>
+                    <div className="text-2xl font-bold stats-counter">{averageScore}%</div>
                     <div className="text-xs text-white/80">Avg Score</div>
                   </div>
                   <div>
-                    <div className="text-2xl font-bold stats-counter">{performanceMetrics.totalSessions}</div>
+                    <div className="text-2xl font-bold stats-counter">{totalSessions}</div>
                     <div className="text-xs text-white/80">Sessions</div>
                   </div>
                 </div>
@@ -298,13 +339,15 @@ const MockInterview = () => {
                 <div className="mb-4">
                   <div className="flex justify-between text-sm mb-2">
                     <span>Improvement Rate</span>
-                    <span>+{performanceMetrics.improvementRate}%</span>
+                    <span>+{Math.max(0, averageScore - 60)}%</span>
                   </div>
-                  <Progress value={performanceMetrics.improvementRate * 2} className="bg-white/20" />
+                  <Progress value={Math.min(100, averageScore)} className="bg-white/20" />
                 </div>
 
                 <p className="text-white/90 text-sm">
-                  You're performing better than 78% of candidates at your level!
+                  {totalSessions > 0 
+                    ? `You're performing better than ${Math.min(95, 50 + averageScore/2)}% of candidates!`
+                    : "Complete interviews to track your progress!"}
                 </p>
               </div>
             </Card>

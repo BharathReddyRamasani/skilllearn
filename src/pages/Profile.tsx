@@ -17,34 +17,47 @@ import {
   Edit,
   Award,
   TrendingUp,
-  Clock
+  Clock,
+  Loader2
 } from "lucide-react";
+import { usePersonalizedData } from "@/hooks/usePersonalizedData";
 
 const Profile = () => {
-  const skills = [
-    { name: "React.js", level: 85, category: "Frontend" },
-    { name: "Node.js", level: 78, category: "Backend" },
-    { name: "MongoDB", level: 72, category: "Database" },
-    { name: "Machine Learning", level: 68, category: "AI/ML" },
-    { name: "Python", level: 90, category: "Programming" },
-    { name: "Data Structures", level: 82, category: "CS Fundamentals" }
-  ];
+  const { 
+    user, 
+    userStats, 
+    skills, 
+    goals, 
+    activities, 
+    loading,
+    generateAIInsights 
+  } = usePersonalizedData();
 
-  const achievements = [
-    { title: "Course Crusher", description: "Completed 10 courses", icon: BookOpen, earned: true },
-    { title: "Quiz Master", description: "100% score on 5 quizzes", icon: Brain, earned: true },
-    { title: "Consistency King", description: "30-day learning streak", icon: Calendar, earned: true },
-    { title: "AI Expert", description: "Master ML fundamentals", icon: Code, earned: false },
-    { title: "Interview Ace", description: "Perfect mock interview", icon: Target, earned: false },
-    { title: "Job Ready", description: "80%+ placement readiness", icon: Trophy, earned: false }
-  ];
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
-  const learningStats = [
-    { label: "Total Hours", value: "142", icon: Clock },
-    { label: "Courses Completed", value: "8", icon: BookOpen },
-    { label: "Skills Mastered", value: "12", icon: Code },
-    { label: "Certificates Earned", value: "5", icon: Award }
-  ];
+  // Show empty state for new users
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="max-w-4xl mx-auto px-4 py-8 text-center">
+          <h1 className="text-2xl font-semibold mb-4">Welcome to LearnSphere!</h1>
+          <p className="text-muted-foreground">Please sign in to view your personalized profile.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const displaySkills = skills?.length > 0 ? skills : [];
+  const displayGoals = goals?.length > 0 ? goals : [];
+  const displayActivities = activities?.length > 0 ? activities : [];
+  const placementReadiness = userStats?.placement_readiness || 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -58,30 +71,32 @@ const Profile = () => {
               <div className="text-center">
                 <Avatar className="w-24 h-24 mx-auto mb-4">
                   <AvatarImage src="/placeholder-avatar.jpg" />
-                  <AvatarFallback className="text-2xl hero-gradient text-white">RS</AvatarFallback>
+                  <AvatarFallback className="text-2xl hero-gradient text-white">
+                    {user.email?.charAt(0).toUpperCase()}
+                  </AvatarFallback>
                 </Avatar>
-                <h2 className="text-2xl font-bold mb-2">Rahul Sharma</h2>
-                <p className="text-muted-foreground mb-4">B.Tech Computer Science • Final Year</p>
+                <h2 className="text-2xl font-bold mb-2">{user.email?.split('@')[0] || 'User'}</h2>
+                <p className="text-muted-foreground mb-4">LearnSphere Student</p>
                 
                 <div className="flex items-center justify-center space-x-4 text-sm text-muted-foreground mb-4">
                   <div className="flex items-center">
-                    <MapPin className="w-4 h-4 mr-1" />
-                    Mumbai, India
-                  </div>
-                  <div className="flex items-center">
                     <Calendar className="w-4 h-4 mr-1" />
-                    Joined Jan 2024
+                    Joined {new Date(user.created_at).toLocaleDateString()}
                   </div>
                 </div>
 
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Placement Readiness</span>
-                    <span className="font-semibold text-primary">73%</span>
+                    <span className="font-semibold text-primary">{placementReadiness}%</span>
                   </div>
-                  <Progress value={73} />
+                  <Progress value={placementReadiness} />
                   <p className="text-xs text-muted-foreground">
-                    You're in the top 25% of students!
+                    {placementReadiness > 70 
+                      ? "You're doing great! Keep it up!" 
+                      : placementReadiness > 30 
+                      ? "Making progress! Keep learning!"
+                      : "Just getting started - your journey begins here!"}
                   </p>
                 </div>
 
@@ -96,13 +111,26 @@ const Profile = () => {
             <Card className="learning-card p-6">
               <h3 className="text-lg font-semibold mb-4">Learning Statistics</h3>
               <div className="grid grid-cols-2 gap-4">
-                {learningStats.map((stat, index) => (
-                  <div key={index} className="text-center p-3 bg-muted/30 rounded-lg">
-                    <stat.icon className="w-6 h-6 mx-auto mb-2 text-primary" />
-                    <div className="text-2xl font-bold stats-counter">{stat.value}</div>
-                    <div className="text-xs text-muted-foreground">{stat.label}</div>
-                  </div>
-                ))}
+                <div className="text-center p-3 bg-muted/30 rounded-lg">
+                  <Clock className="w-6 h-6 mx-auto mb-2 text-primary" />
+                  <div className="text-2xl font-bold stats-counter">{userStats?.total_learning_hours || 0}</div>
+                  <div className="text-xs text-muted-foreground">Total Hours</div>
+                </div>
+                <div className="text-center p-3 bg-muted/30 rounded-lg">
+                  <BookOpen className="w-6 h-6 mx-auto mb-2 text-primary" />
+                  <div className="text-2xl font-bold stats-counter">{userStats?.courses_completed || 0}</div>
+                  <div className="text-xs text-muted-foreground">Courses Completed</div>
+                </div>
+                <div className="text-center p-3 bg-muted/30 rounded-lg">
+                  <Code className="w-6 h-6 mx-auto mb-2 text-primary" />
+                  <div className="text-2xl font-bold stats-counter">{userStats?.skills_mastered || 0}</div>
+                  <div className="text-xs text-muted-foreground">Skills Mastered</div>
+                </div>
+                <div className="text-center p-3 bg-muted/30 rounded-lg">
+                  <Award className="w-6 h-6 mx-auto mb-2 text-primary" />
+                  <div className="text-2xl font-bold stats-counter">{displayActivities.length}</div>
+                  <div className="text-xs text-muted-foreground">Activities</div>
+                </div>
               </div>
             </Card>
 
@@ -112,14 +140,19 @@ const Profile = () => {
                 <Target className="w-5 h-5 mr-2 text-primary" />
                 Career Goals
               </h3>
-              <div className="space-y-3">
-                <Badge className="hero-gradient text-white">Full Stack Developer</Badge>
-                <Badge variant="outline">Machine Learning Engineer</Badge>
-                <Badge variant="outline">Data Scientist</Badge>
-              </div>
-              <p className="text-sm text-muted-foreground mt-4">
-                Target companies: Google, Microsoft, Amazon, Netflix
-              </p>
+              {displayGoals.length > 0 ? (
+                <div className="space-y-3">
+                  {displayGoals.map((goal) => (
+                    <Badge key={goal.id} className="hero-gradient text-white block w-fit">
+                      {goal.title}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Set your career goals to get personalized learning recommendations!
+                </p>
+              )}
             </Card>
           </div>
 
@@ -129,28 +162,35 @@ const Profile = () => {
             <Card className="learning-card p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-semibold">Skills Portfolio</h2>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={generateAIInsights}>
                   <TrendingUp className="w-4 h-4 mr-2" />
-                  View Analytics
+                  Generate Insights
                 </Button>
               </div>
               
-              <div className="grid gap-6">
-                {skills.map((skill, index) => (
-                  <div key={index} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <span className="font-medium">{skill.name}</span>
-                        <Badge variant="secondary" className="text-xs">
-                          {skill.category}
-                        </Badge>
+              {displaySkills.length > 0 ? (
+                <div className="grid gap-6">
+                  {displaySkills.map((skill) => (
+                    <div key={skill.id} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <span className="font-medium">{skill.skill_name}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {skill.category}
+                          </Badge>
+                        </div>
+                        <span className="text-sm font-semibold text-primary">{Math.round(skill.mastery_score * 100)}%</span>
                       </div>
-                      <span className="text-sm font-semibold text-primary">{skill.level}%</span>
+                      <Progress value={skill.mastery_score * 100} />
                     </div>
-                    <Progress value={skill.level} />
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Brain className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground">No skills tracked yet. Complete learning activities to build your skill profile!</p>
+                </div>
+              )}
 
               <div className="mt-6 p-4 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg">
                 <div className="flex items-center space-x-3">
@@ -158,87 +198,40 @@ const Profile = () => {
                   <div>
                     <h4 className="font-semibold">AI Skill Analysis</h4>
                     <p className="text-sm text-muted-foreground">
-                      Focus on System Design and Advanced React patterns to reach 80% placement readiness
+                      {displaySkills.length > 0 
+                        ? `Focus on ${displaySkills[0]?.skill_name || 'new skills'} to improve your placement readiness`
+                        : "Start learning and practicing to get personalized AI insights!"}
                     </p>
                   </div>
                 </div>
               </div>
             </Card>
 
-            {/* Achievements */}
-            <Card className="learning-card p-6">
-              <h2 className="text-2xl font-semibold mb-6">Achievements & Badges</h2>
-              <div className="grid md:grid-cols-2 gap-4">
-                {achievements.map((achievement, index) => (
-                  <div key={index} className={`p-4 rounded-lg border transition-all ${
-                    achievement.earned 
-                      ? 'border-primary/20 bg-primary/5' 
-                      : 'border-border bg-muted/30 opacity-60'
-                  }`}>
-                    <div className="flex items-start space-x-3">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        achievement.earned 
-                          ? 'hero-gradient text-white' 
-                          : 'bg-muted text-muted-foreground'
-                      }`}>
-                        <achievement.icon className="w-5 h-5" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className={`font-semibold ${
-                          achievement.earned ? 'text-foreground' : 'text-muted-foreground'
-                        }`}>
-                          {achievement.title}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          {achievement.description}
-                        </p>
-                        {achievement.earned && (
-                          <Badge className="mt-2 bg-success text-success-foreground">
-                            Earned
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-
             {/* Learning History */}
             <Card className="learning-card p-6">
               <h2 className="text-2xl font-semibold mb-6">Recent Learning Activity</h2>
-              <div className="space-y-4">
-                {[
-                  {
-                    title: "Machine Learning Fundamentals",
-                    type: "Course Completed",
-                    date: "2 days ago",
-                    score: "92%"
-                  },
-                  {
-                    title: "React Advanced Patterns Quiz",
-                    type: "Quiz Completed", 
-                    date: "5 days ago",
-                    score: "85%"
-                  },
-                  {
-                    title: "System Design Basics",
-                    type: "Course Started",
-                    date: "1 week ago",
-                    score: "In Progress"
-                  }
-                ].map((activity, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-                    <div>
-                      <h3 className="font-semibold">{activity.title}</h3>
-                      <p className="text-sm text-muted-foreground">{activity.type} • {activity.date}</p>
+              {displayActivities.length > 0 ? (
+                <div className="space-y-4">
+                  {displayActivities.slice(0, 5).map((activity) => (
+                    <div key={activity.id} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                      <div>
+                        <h3 className="font-semibold">{activity.title}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {activity.activity_type} • {new Date(activity.completed_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Badge variant={activity.accuracy_score ? "default" : "secondary"}>
+                        {activity.accuracy_score ? `${Math.round(activity.accuracy_score)}%` : "Completed"}
+                      </Badge>
                     </div>
-                    <Badge variant={activity.score === "In Progress" ? "secondary" : "default"}>
-                      {activity.score}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Clock className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground">No learning activities yet. Start your learning journey!</p>
+                </div>
+              )}
             </Card>
           </div>
         </div>
