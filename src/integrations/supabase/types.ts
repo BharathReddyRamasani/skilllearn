@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_recommendations: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          metadata: Json | null
+          priority: number | null
+          recommendation_type: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          priority?: number | null
+          recommendation_type: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          priority?: number | null
+          recommendation_type?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       courses: {
         Row: {
           created_at: string
@@ -66,6 +102,90 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      interview_sessions: {
+        Row: {
+          completed_at: string | null
+          duration_minutes: number | null
+          feedback: string | null
+          id: string
+          improvements: string[] | null
+          interview_type: string
+          overall_score: number | null
+          questions: Json | null
+          responses: Json | null
+          strengths: string[] | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          duration_minutes?: number | null
+          feedback?: string | null
+          id?: string
+          improvements?: string[] | null
+          interview_type: string
+          overall_score?: number | null
+          questions?: Json | null
+          responses?: Json | null
+          strengths?: string[] | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          duration_minutes?: number | null
+          feedback?: string | null
+          id?: string
+          improvements?: string[] | null
+          interview_type?: string
+          overall_score?: number | null
+          questions?: Json | null
+          responses?: Json | null
+          strengths?: string[] | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      learning_activities: {
+        Row: {
+          accuracy_score: number | null
+          activity_type: string
+          completed_at: string | null
+          created_at: string | null
+          difficulty_level: string | null
+          duration_minutes: number | null
+          engagement_score: number | null
+          id: string
+          skills_practiced: string[] | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          accuracy_score?: number | null
+          activity_type: string
+          completed_at?: string | null
+          created_at?: string | null
+          difficulty_level?: string | null
+          duration_minutes?: number | null
+          engagement_score?: number | null
+          id?: string
+          skills_practiced?: string[] | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          accuracy_score?: number | null
+          activity_type?: string
+          completed_at?: string | null
+          created_at?: string | null
+          difficulty_level?: string | null
+          duration_minutes?: number | null
+          engagement_score?: number | null
+          id?: string
+          skills_practiced?: string[] | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       lesson_progress: {
         Row: {
@@ -196,6 +316,252 @@ export type Database = {
           full_name?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      roadmap_weeks: {
+        Row: {
+          completion_percentage: number | null
+          created_at: string | null
+          description: string | null
+          estimated_hours: number | null
+          id: string
+          skills_focus: string[] | null
+          status: string | null
+          title: string
+          topics: string[] | null
+          updated_at: string | null
+          user_id: string
+          week_number: number
+        }
+        Insert: {
+          completion_percentage?: number | null
+          created_at?: string | null
+          description?: string | null
+          estimated_hours?: number | null
+          id?: string
+          skills_focus?: string[] | null
+          status?: string | null
+          title: string
+          topics?: string[] | null
+          updated_at?: string | null
+          user_id: string
+          week_number: number
+        }
+        Update: {
+          completion_percentage?: number | null
+          created_at?: string | null
+          description?: string | null
+          estimated_hours?: number | null
+          id?: string
+          skills_focus?: string[] | null
+          status?: string | null
+          title?: string
+          topics?: string[] | null
+          updated_at?: string | null
+          user_id?: string
+          week_number?: number
+        }
+        Relationships: []
+      }
+      user_achievements: {
+        Row: {
+          achievement_description: string | null
+          achievement_title: string
+          badge_icon: string | null
+          category: string | null
+          earned_at: string | null
+          id: string
+          points_earned: number | null
+          user_id: string
+        }
+        Insert: {
+          achievement_description?: string | null
+          achievement_title: string
+          badge_icon?: string | null
+          category?: string | null
+          earned_at?: string | null
+          id?: string
+          points_earned?: number | null
+          user_id: string
+        }
+        Update: {
+          achievement_description?: string | null
+          achievement_title?: string
+          badge_icon?: string | null
+          category?: string | null
+          earned_at?: string | null
+          id?: string
+          points_earned?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_goals: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          goal_type: string
+          id: string
+          priority: number | null
+          status: string | null
+          target_date: string | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          goal_type?: string
+          id?: string
+          priority?: number | null
+          status?: string | null
+          target_date?: string | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          goal_type?: string
+          id?: string
+          priority?: number | null
+          status?: string | null
+          target_date?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_preferences: {
+        Row: {
+          active_hours: string[] | null
+          career_focus: string | null
+          created_at: string | null
+          experience_level: string | null
+          id: string
+          learning_style: string | null
+          motivation_type: string | null
+          preferred_schedule: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          active_hours?: string[] | null
+          career_focus?: string | null
+          created_at?: string | null
+          experience_level?: string | null
+          id?: string
+          learning_style?: string | null
+          motivation_type?: string | null
+          preferred_schedule?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          active_hours?: string[] | null
+          career_focus?: string | null
+          created_at?: string | null
+          experience_level?: string | null
+          id?: string
+          learning_style?: string | null
+          motivation_type?: string | null
+          preferred_schedule?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_skills: {
+        Row: {
+          category: string
+          created_at: string | null
+          decay_rate: number | null
+          id: string
+          last_practiced: string | null
+          level: number | null
+          mastery_score: number | null
+          reinforcement_count: number | null
+          skill_name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          decay_rate?: number | null
+          id?: string
+          last_practiced?: string | null
+          level?: number | null
+          mastery_score?: number | null
+          reinforcement_count?: number | null
+          skill_name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          decay_rate?: number | null
+          id?: string
+          last_practiced?: string | null
+          level?: number | null
+          mastery_score?: number | null
+          reinforcement_count?: number | null
+          skill_name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_stats: {
+        Row: {
+          consistency_score: number | null
+          courses_completed: number | null
+          created_at: string | null
+          dropout_risk: string | null
+          engagement_trend: string | null
+          id: string
+          last_activity: string | null
+          learning_velocity: number | null
+          placement_readiness: number | null
+          skills_mastered: number | null
+          total_learning_hours: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          consistency_score?: number | null
+          courses_completed?: number | null
+          created_at?: string | null
+          dropout_risk?: string | null
+          engagement_trend?: string | null
+          id?: string
+          last_activity?: string | null
+          learning_velocity?: number | null
+          placement_readiness?: number | null
+          skills_mastered?: number | null
+          total_learning_hours?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          consistency_score?: number | null
+          courses_completed?: number | null
+          created_at?: string | null
+          dropout_risk?: string | null
+          engagement_trend?: string | null
+          id?: string
+          last_activity?: string | null
+          learning_velocity?: number | null
+          placement_readiness?: number | null
+          skills_mastered?: number | null
+          total_learning_hours?: number | null
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }

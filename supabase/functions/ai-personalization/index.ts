@@ -55,17 +55,37 @@ serve(async (req) => {
 });
 
 async function generatePersonalizedRoadmap(supabase: any, userId: string, data: any) {
-  // Get user profile and skills
+  // Get user profile and apply forgetting curve to skills
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single();
-  const { data: skills } = await supabase.from('user_skills').select('*').eq('user_id', userId);
+  const { data: rawSkills } = await supabase.from('user_skills').select('*').eq('user_id', userId);
   const { data: goals } = await supabase.from('user_goals').select('*').eq('user_id', userId);
+  const { data: activities } = await supabase.from('learning_activities').select('*').eq('user_id', userId).order('completed_at', { ascending: false }).limit(20);
+  const { data: preferences } = await supabase.from('user_preferences').select('*').eq('user_id', userId).single();
 
-  const prompt = `Generate a personalized 12-week learning roadmap for a user with:
-  Profile: ${JSON.stringify(profile)}
-  Current Skills: ${JSON.stringify(skills)}
-  Career Goals: ${JSON.stringify(goals)}
-  
-  Return a JSON array of 12 weeks with: week_number, title, description, topics (array), estimated_hours, status ('not_started'/'current'/'completed'), skills_focus (array)`;
+  // Apply Ebbinghaus Forgetting Curve to update skill mastery
+  const updatedSkills = await applyForgettingCurve(supabase, rawSkills || [], userId);
+
+  const prompt = `You are the personalization engine for LearnSphere. Generate a highly personalized 12-week learning roadmap.
+
+User Profile: ${JSON.stringify(profile)}
+Skills (with decay-adjusted mastery): ${JSON.stringify(updatedSkills)}
+Career Goals: ${JSON.stringify(goals)}
+Recent Activities: ${JSON.stringify(activities)}
+Learning Preferences: ${JSON.stringify(preferences)}
+
+Apply Data Science principles:
+1. Use forgetting curve decay patterns to identify skills needing reinforcement
+2. Prioritize based on career alignment and skill gaps
+3. Consider learning velocity and engagement patterns
+4. Include probabilistic variation to ensure uniqueness
+
+Return JSON array of 12 weeks with:
+- week_number, title, description, topics (array)
+- estimated_hours, status, skills_focus (array)
+- difficulty_progression, prerequisites
+- personalized_notes based on user behavior
+
+Make each roadmap unique even for similar users.`;
 
   const aiResponse = await callOpenAI(prompt);
   const roadmapWeeks = JSON.parse(aiResponse);
@@ -73,11 +93,13 @@ async function generatePersonalizedRoadmap(supabase: any, userId: string, data: 
   // Clear existing roadmap
   await supabase.from('roadmap_weeks').delete().eq('user_id', userId);
 
-  // Insert new roadmap weeks
-  const weeksWithUserId = roadmapWeeks.map((week: any) => ({
+  // Insert new roadmap weeks with personalization
+  const weeksWithUserId = roadmapWeeks.map((week: any, index: number) => ({
     ...week,
     user_id: userId,
-    status: week.week_number === 1 ? 'current' : 'not_started'
+    week_number: index + 1,
+    status: index === 0 ? 'current' : 'not_started',
+    completion_percentage: 0
   }));
 
   await supabase.from('roadmap_weeks').insert(weeksWithUserId);
@@ -88,19 +110,48 @@ async function generatePersonalizedRoadmap(supabase: any, userId: string, data: 
 }
 
 async function generateJobMatches(supabase: any, userId: string, data: any) {
-  const { data: skills } = await supabase.from('user_skills').select('*').eq('user_id', userId);
+  const { data: rawSkills } = await supabase.from('user_skills').select('*').eq('user_id', userId);
   const { data: goals } = await supabase.from('user_goals').select('*').eq('user_id', userId);
+  const { data: preferences } = await supabase.from('user_preferences').select('*').eq('user_id', userId).single();
+  const { data: activities } = await supabase.from('learning_activities').select('*').eq('user_id', userId).order('completed_at', { ascending: false }).limit(10);
 
-  const prompt = `Generate 8 personalized job recommendations based on:
-  Skills: ${JSON.stringify(skills)}
-  Goals: ${JSON.stringify(goals)}
+  // Apply forgetting curve and calculate placement readiness
+  const skills = await applyForgettingCurve(supabase, rawSkills || [], userId);
   
-  Return JSON array with: title, company, location, salary_range, experience_level, match_score (0-100), required_skills (array), missing_skills (array), job_type, applicants_count, posted_days_ago, description`;
+  // Calculate user skill vector for cosine similarity
+  const userSkillVector = calculateSkillVector(skills);
+  
+  // Define job market vectors (in real app, this would come from job database)
+  const jobMarketVectors = getJobMarketVectors();
+  
+  // Calculate cosine similarity matches
+  const jobMatches = jobMarketVectors.map(job => {
+    const matchScore = calculateCosineSimilarity(userSkillVector, job.skillVector);
+    const missingSkills = job.required_skills.filter(skill => 
+      !skills.find(userSkill => userSkill.skill_name.toLowerCase() === skill.toLowerCase() && userSkill.mastery_score > 0.6)
+    );
+    
+    return {
+      ...job,
+      match_score: Math.round(matchScore * 100),
+      missing_skills: missingSkills,
+      placement_readiness: calculatePlacementReadiness(skills, job.required_skills)
+    };
+  }).sort((a, b) => b.match_score - a.match_score);
+
+  const prompt = `Enhance these job matches with personalized insights:
+  User Skills: ${JSON.stringify(skills)}
+  Goals: ${JSON.stringify(goals)}
+  Preferences: ${JSON.stringify(preferences)}
+  Calculated Matches: ${JSON.stringify(jobMatches.slice(0, 8))}
+  
+  Add personalized description and growth_potential for each job based on user profile.
+  Ensure variety and uniqueness for this specific user.`;
 
   const aiResponse = await callOpenAI(prompt);
-  const jobMatches = JSON.parse(aiResponse);
+  const enhancedMatches = JSON.parse(aiResponse);
 
-  return new Response(JSON.stringify({ jobMatches }), {
+  return new Response(JSON.stringify({ jobMatches: enhancedMatches }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
   });
 }
@@ -190,6 +241,105 @@ async function initializeUserData(supabase: any, userId: string, data: any) {
   });
 }
 
+// Ebbinghaus Forgetting Curve Implementation
+async function applyForgettingCurve(supabase: any, skills: any[], userId: string) {
+  const updatedSkills = [];
+  
+  for (const skill of skills) {
+    const daysSincePractice = Math.floor((Date.now() - new Date(skill.last_practiced).getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Forgetting curve: R = e^(-t/S) where R=retention, t=time, S=strength
+    const retentionRate = Math.exp(-daysSincePractice * skill.decay_rate);
+    const decayedMastery = skill.mastery_score * retentionRate;
+    
+    // Update skill mastery in database
+    const newMastery = Math.max(0.1, Math.min(1, decayedMastery));
+    await supabase.from('user_skills').update({ 
+      mastery_score: newMastery,
+      updated_at: new Date().toISOString()
+    }).eq('id', skill.id);
+    
+    updatedSkills.push({ ...skill, mastery_score: newMastery });
+  }
+  
+  return updatedSkills;
+}
+
+// Calculate skill vector for cosine similarity
+function calculateSkillVector(skills: any[]) {
+  const skillCategories = ['Programming', 'Frontend', 'Backend', 'Database', 'AI/ML', 'DevOps', 'Mobile', 'Design'];
+  return skillCategories.map(category => {
+    const categorySkills = skills.filter(s => s.category === category);
+    return categorySkills.length > 0 
+      ? categorySkills.reduce((sum, s) => sum + s.mastery_score, 0) / categorySkills.length 
+      : 0;
+  });
+}
+
+// Cosine similarity calculation
+function calculateCosineSimilarity(vectorA: number[], vectorB: number[]) {
+  const dotProduct = vectorA.reduce((sum, a, i) => sum + a * vectorB[i], 0);
+  const magnitudeA = Math.sqrt(vectorA.reduce((sum, a) => sum + a * a, 0));
+  const magnitudeB = Math.sqrt(vectorB.reduce((sum, b) => sum + b * b, 0));
+  return magnitudeA && magnitudeB ? dotProduct / (magnitudeA * magnitudeB) : 0;
+}
+
+// Job market vectors (simplified for demo)
+function getJobMarketVectors() {
+  return [
+    {
+      title: "Full Stack Developer",
+      company: "TechCorp",
+      location: "San Francisco, CA",
+      salary_range: "$90k - $130k",
+      experience_level: "Mid-level",
+      job_type: "Full-time",
+      applicants_count: 45,
+      posted_days_ago: 3,
+      required_skills: ["JavaScript", "React", "Node.js", "SQL", "Git"],
+      skillVector: [0.9, 0.8, 0.8, 0.6, 0.2, 0.3, 0.1, 0.2],
+      description: "Build scalable web applications"
+    },
+    {
+      title: "Machine Learning Engineer",
+      company: "AI Innovations",
+      location: "Seattle, WA",
+      salary_range: "$110k - $160k",
+      experience_level: "Senior",
+      job_type: "Full-time",
+      applicants_count: 23,
+      posted_days_ago: 1,
+      required_skills: ["Python", "TensorFlow", "Machine Learning", "Statistics", "SQL"],
+      skillVector: [0.8, 0.2, 0.4, 0.7, 0.9, 0.3, 0.1, 0.1],
+      description: "Develop ML models for production"
+    },
+    {
+      title: "Frontend Developer",
+      company: "Design Studio",
+      location: "Austin, TX",
+      salary_range: "$70k - $95k",
+      experience_level: "Junior",
+      job_type: "Full-time",
+      applicants_count: 67,
+      posted_days_ago: 5,
+      required_skills: ["React", "CSS", "JavaScript", "UI/UX"],
+      skillVector: [0.7, 0.9, 0.2, 0.1, 0.0, 0.1, 0.2, 0.8],
+      description: "Create beautiful user interfaces"
+    }
+  ];
+}
+
+// Calculate placement readiness score
+function calculatePlacementReadiness(userSkills: any[], jobRequiredSkills: string[]) {
+  const matchedSkills = jobRequiredSkills.filter(required => 
+    userSkills.some(userSkill => 
+      userSkill.skill_name.toLowerCase() === required.toLowerCase() && 
+      userSkill.mastery_score > 0.5
+    )
+  );
+  return Math.round((matchedSkills.length / jobRequiredSkills.length) * 100);
+}
+
 async function callOpenAI(prompt: string): Promise<string> {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -198,16 +348,15 @@ async function callOpenAI(prompt: string): Promise<string> {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5-2025-08-07',
       messages: [
         { 
           role: 'system', 
-          content: 'You are an AI career advisor. Always return valid JSON responses only, no additional text or formatting.' 
+          content: 'You are an advanced AI career advisor specializing in personalized learning and career guidance. Apply data science principles and machine learning concepts. Always return valid JSON responses only.' 
         },
         { role: 'user', content: prompt }
       ],
-      max_tokens: 2000,
-      temperature: 0.7,
+      max_completion_tokens: 2500,
     }),
   });
 
