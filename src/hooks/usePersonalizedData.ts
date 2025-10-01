@@ -281,6 +281,47 @@ export const usePersonalizedData = () => {
     }
   };
 
+  // Skill Graph Functions
+  const fetchGraphData = async () => {
+    if (!user) return { nodes: [], links: [], clusters: [] };
+    try {
+      const { data: graphData, error } = await supabase.functions.invoke('skill-graph-engine', {
+        body: { userId: user.id, action: 'get_graph_data' }
+      });
+      if (error) throw error;
+      return graphData;
+    } catch (error) {
+      console.error('Error fetching graph data:', error);
+      return { nodes: [], links: [], clusters: [] };
+    }
+  };
+
+  const getGraphRecommendations = async () => {
+    if (!user) return [];
+    try {
+      const { data, error } = await supabase.functions.invoke('skill-graph-engine', {
+        body: { userId: user.id, action: 'get_recommendations' }
+      });
+      if (error) throw error;
+      return data?.recommendations || [];
+    } catch (error) {
+      console.error('Error getting recommendations:', error);
+      return [];
+    }
+  };
+
+  const updateSkillMastery = async () => {
+    if (!user) return;
+    try {
+      await supabase.functions.invoke('skill-graph-engine', {
+        body: { userId: user.id, action: 'update_skill_mastery' }
+      });
+      await fetchAllUserData(user.id);
+    } catch (error) {
+      console.error('Error updating skill mastery:', error);
+    }
+  };
+
   return {
     user,
     userStats,
@@ -295,6 +336,9 @@ export const usePersonalizedData = () => {
     generateJobMatches,
     generateAIInsights,
     trackLearningActivity,
+    fetchGraphData,
+    getGraphRecommendations,
+    updateSkillMastery,
     refreshData: () => user && fetchAllUserData(user.id)
   };
 };

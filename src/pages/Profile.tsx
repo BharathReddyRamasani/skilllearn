@@ -21,6 +21,8 @@ import {
   Loader2
 } from "lucide-react";
 import { usePersonalizedData } from "@/hooks/usePersonalizedData";
+import { SkillGraphVisualization } from "@/components/SkillGraphVisualization";
+import { useState, useEffect } from "react";
 
 const Profile = () => {
   const { 
@@ -30,8 +32,30 @@ const Profile = () => {
     goals, 
     activities, 
     loading,
-    generateAIInsights 
+    generateAIInsights,
+    fetchGraphData,
+    getGraphRecommendations
   } = usePersonalizedData();
+
+  const [graphData, setGraphData] = useState<any>({ nodes: [], links: [], clusters: [] });
+  const [graphRecommendations, setGraphRecommendations] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (user) {
+      loadGraphData();
+    }
+  }, [user]);
+
+  const loadGraphData = async () => {
+    try {
+      const data = await fetchGraphData();
+      const recs = await getGraphRecommendations();
+      setGraphData(data);
+      setGraphRecommendations(recs);
+    } catch (error) {
+      console.error('Error loading graph:', error);
+    }
+  };
 
   if (loading) {
     return (
@@ -233,6 +257,18 @@ const Profile = () => {
                 </div>
               )}
             </Card>
+
+            {/* Skill Graph */}
+            {graphData.nodes.length > 0 && (
+              <SkillGraphVisualization
+                nodes={graphData.nodes}
+                links={graphData.links}
+                recommendations={graphRecommendations}
+                onNodeClick={(node) => {
+                  console.log('Selected node:', node);
+                }}
+              />
+            )}
           </div>
         </div>
       </div>

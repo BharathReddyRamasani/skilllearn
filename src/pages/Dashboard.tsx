@@ -26,6 +26,7 @@ import { Link } from "react-router-dom";
 import { usePersonalizedData } from "@/hooks/usePersonalizedData";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { SkillGraphVisualization } from "@/components/SkillGraphVisualization";
 
 const Dashboard = () => {
   const {
@@ -36,18 +37,39 @@ const Dashboard = () => {
     recommendations,
     loading,
     generateAIInsights,
-    trackLearningActivity
+    trackLearningActivity,
+    fetchGraphData,
+    getGraphRecommendations,
+    updateSkillMastery
   } = usePersonalizedData();
   
   const [aiInsights, setAiInsights] = useState<any>(null);
   const [generatingInsights, setGeneratingInsights] = useState(false);
+  const [graphData, setGraphData] = useState<any>({ nodes: [], links: [], clusters: [] });
+  const [graphRecommendations, setGraphRecommendations] = useState<any[]>([]);
+  const [loadingGraph, setLoadingGraph] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     if (!loading && user && !aiInsights) {
       handleGenerateInsights();
+      loadGraphData();
     }
   }, [loading, user]);
+
+  const loadGraphData = async () => {
+    setLoadingGraph(true);
+    try {
+      const data = await fetchGraphData();
+      const recs = await getGraphRecommendations();
+      setGraphData(data);
+      setGraphRecommendations(recs);
+    } catch (error) {
+      console.error('Error loading graph:', error);
+    } finally {
+      setLoadingGraph(false);
+    }
+  };
 
   const handleGenerateInsights = async () => {
     setGeneratingInsights(true);
@@ -307,9 +329,11 @@ const Dashboard = () => {
                       <p className="text-sm text-muted-foreground mb-2">{rec.description}</p>
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">🎯 AI Generated</span>
-                        <Button size="sm" variant="ghost">
-                          Take Action <ArrowRight className="h-3 w-3 ml-1" />
-                        </Button>
+                        <Link to="/courses">
+                          <Button size="sm" variant="ghost">
+                            Take Action <ArrowRight className="h-3 w-3 ml-1" />
+                          </Button>
+                        </Link>
                       </div>
                     </div>
                   )) : recommendations.map((rec, index) => (
@@ -329,9 +353,11 @@ const Dashboard = () => {
                       <p className="text-sm text-muted-foreground mb-2">{rec.description}</p>
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">📊 Data Driven</span>
-                        <Button size="sm" variant="ghost">
-                          Take Action <ArrowRight className="h-3 w-3 ml-1" />
-                        </Button>
+                        <Link to="/roadmap">
+                          <Button size="sm" variant="ghost">
+                            Take Action <ArrowRight className="h-3 w-3 ml-1" />
+                          </Button>
+                        </Link>
                       </div>
                     </div>
                   ))}
@@ -354,6 +380,18 @@ const Dashboard = () => {
                 </div>
               </div>
             </Card>
+
+            {/* Skill Graph Visualization */}
+            {graphData.nodes.length > 0 && (
+              <SkillGraphVisualization
+                nodes={graphData.nodes}
+                links={graphData.links}
+                recommendations={graphRecommendations}
+                onNodeClick={(node) => {
+                  console.log('Selected node:', node);
+                }}
+              />
+            )}
           </div>
 
           {/* Sidebar */}

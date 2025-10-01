@@ -99,6 +99,7 @@ const { data: sessionData } = await supabase.auth.getSession();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
     try {
+      // Mark lesson as completed
       const { error } = await supabase
         .from("lesson_progress")
         .upsert({
@@ -108,10 +109,76 @@ const { data: sessionData } = await supabase.auth.getSession();
           completed_at: new Date().toISOString(),
         }, { onConflict: "user_id,lesson_id" });
       if (error) throw error;
-      toast({ title: "Marked complete" });
+
+      // Track learning activity
+      await supabase.from("learning_activities").insert({
+        user_id: session.user.id,
+        activity_type: "lesson",
+        title: `Completed lesson in ${course?.title}`,
+        duration_minutes: 30,
+        difficulty_level: "medium",
+        skills_practiced: ["course_learning"]
+      });
+
+      // Update user stats
+      const { data: totalLessons } = await supabase
+        .from("lesson_progress")
+        .select("id", { count: 'exact' })
+        .eq("user_id", session.user.id)
+        .eq("status", "completed");
+
+      await supabase.from("user_stats").upsert({
+        user_id: session.user.id,
+        total_learning_hours: Math.floor((totalLessons?.length || 0) * 0.5),
+        last_activity: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+      // Check if course is complete
+      const allLessonsComplete = await checkCourseCompletion(session.user.id, id!);
+      if (allLessonsComplete) {
+        // Update courses_completed
+        const { data: currentStats } = await supabase
+          .from("user_stats")
+          .select("courses_completed")
+          .eq("user_id", session.user.id)
+          .single();
+
+        await supabase.from("user_stats").update({
+          courses_completed: (currentStats?.courses_completed || 0) + 1
+        }).eq("user_id", session.user.id);
+
+        // Unlock related skills in skill graph
+        await supabase.functions.invoke('skill-graph-engine', {
+          body: { userId: session.user.id, action: 'unlock_skills' }
+        });
+
+        toast({ 
+          title: "Course Completed! 🎉", 
+          description: "New skills unlocked in your learning graph" 
+        });
+      } else {
+        toast({ title: "Lesson completed!" });
+      }
     } catch (e: any) {
       toast({ title: "Update failed", description: e.message });
     }
+  };
+
+  const checkCourseCompletion = async (userId: string, courseId: string): Promise<boolean> => {
+    const { data: allLessons } = await supabase
+      .from("lessons")
+      .select("id")
+      .in("module_id", modules.map(m => m.id));
+
+    const { data: completedLessons } = await supabase
+      .from("lesson_progress")
+      .select("lesson_id")
+      .eq("user_id", userId)
+      .eq("status", "completed");
+
+    const completedIds = new Set(completedLessons?.map(l => l.lesson_id) || []);
+    return allLessons?.every(l => completedIds.has(l.id)) || false;
   };
 
   return (

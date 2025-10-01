@@ -2,3 +2,6 @@ project_id = "dikgfttqroykuekgizye"
 
 [functions.ai-personalization]
   verify_jwt = false
+
+[functions.skill-graph-engine]
+  verify_jwt = false
