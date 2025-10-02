@@ -509,7 +509,12 @@ const Dashboard = () => {
                   {Math.floor((userStats?.total_learning_hours || 0) / 10) || 1}
                 </p>
                 <p className="text-sm text-muted-foreground">Days consistent learning</p>
-                <Button size="sm" variant="outline" className="mt-3">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="mt-3"
+                  onClick={() => toast({ title: "Achievements", description: "Achievements feature coming soon!" })}
+                >
                   <Star className="h-3 w-3 mr-1" />
                   View All
                 </Button>

@@ -23,14 +23,16 @@ import {
 import { usePersonalizedData } from "@/hooks/usePersonalizedData";
 import { SkillGraphVisualization } from "@/components/SkillGraphVisualization";
 import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const Profile = () => {
+  const { toast } = useToast();
   const { 
     user, 
     userStats, 
     skills, 
-    goals, 
-    activities, 
+    goals,
+    activities,
     loading,
     generateAIInsights,
     fetchGraphData,
@@ -124,7 +126,11 @@ const Profile = () => {
                   </p>
                 </div>
 
-                <Button className="w-full mt-6" variant="outline">
+                <Button 
+                  className="w-full mt-6" 
+                  variant="outline"
+                  onClick={() => toast({ title: "Edit Profile", description: "Profile editing feature coming soon!" })}
+                >
                   <Edit className="w-4 h-4 mr-2" />
                   Edit Profile
                 </Button>

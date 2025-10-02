@@ -21,8 +21,10 @@ import {
 } from "lucide-react";
 import { usePersonalizedData } from "@/hooks/usePersonalizedData";
 import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const JobMatch = () => {
+  const { toast } = useToast();
   const { 
     user, 
     userStats, 
@@ -102,7 +104,10 @@ const JobMatch = () => {
               </p>
             </div>
             <div className="flex space-x-3">
-              <Button variant="outline">
+              <Button 
+                variant="outline"
+                onClick={() => toast({ title: "Filters", description: "Advanced filtering coming soon!" })}
+              >
                 <Filter className="w-4 h-4 mr-2" />
                 Filters
               </Button>
@@ -325,10 +330,18 @@ const JobMatch = () => {
                             </div>
                           </div>
                           <div className="flex space-x-2">
-                            <Button variant="outline" size="sm">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => toast({ title: "Job Details", description: "Detailed job view coming soon!" })}
+                            >
                               View Details
                             </Button>
-                            <Button size="sm" className="hero-gradient text-white">
+                            <Button 
+                              size="sm" 
+                              className="hero-gradient text-white"
+                              onClick={() => toast({ title: "Application", description: "Direct application feature coming soon!" })}
+                            >
                               Apply Now
                               <ArrowRight className="w-4 h-4 ml-2" />
                             </Button>
@@ -353,12 +366,18 @@ const JobMatch = () => {
               )}
 
               {/* Load More */}
-              <div className="text-center mt-8">
-                <Button variant="outline" size="lg">
-                  Load More Jobs
-                  <TrendingUp className="w-4 h-4 ml-2" />
-                </Button>
-              </div>
+              {jobMatches.length > 0 && (
+                <div className="text-center mt-8">
+                  <Button 
+                    variant="outline" 
+                    size="lg"
+                    onClick={() => toast({ title: "Loading", description: "Fetching more job matches..." })}
+                  >
+                    Load More Jobs
+                    <TrendingUp className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+              )}
             </Card>
           </div>
         </div>

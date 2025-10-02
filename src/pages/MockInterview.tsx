@@ -22,11 +22,13 @@ import {
   Loader2
 } from "lucide-react";
 import { usePersonalizedData } from "@/hooks/usePersonalizedData";
+import { useToast } from "@/hooks/use-toast";
 
 const MockInterview = () => {
+  const { toast } = useToast();
   const { 
     user, 
-    userStats, 
+    userStats,
     skills,
     interviewSessions,
     loading 
@@ -233,11 +235,23 @@ const MockInterview = () => {
                         </div>
 
                         <div className="flex space-x-3">
-                          <Button className="hero-gradient text-white shadow-primary">
+                          <Button 
+                            className="hero-gradient text-white shadow-primary"
+                            onClick={() => toast({ 
+                              title: "Starting Interview", 
+                              description: `Preparing ${type.title} interview session...` 
+                            })}
+                          >
                             <Play className="w-4 h-4 mr-2" />
                             Start Interview
                           </Button>
-                          <Button variant="outline">
+                          <Button 
+                            variant="outline"
+                            onClick={() => toast({ 
+                              title: "Practice Mode", 
+                              description: "Practice mode allows you to prepare without time pressure." 
+                            })}
+                          >
                             <Video className="w-4 h-4 mr-2" />
                             Practice Mode
                           </Button>
@@ -415,15 +429,30 @@ const MockInterview = () => {
             <Card className="learning-card p-6">
               <h3 className="text-lg font-semibold mb-4">Quick Start</h3>
               <div className="space-y-3">
-                <Button variant="outline" size="sm" className="w-full justify-start">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start"
+                  onClick={() => toast({ title: "Voice Practice", description: "Voice-based interview practice coming soon!" })}
+                >
                   <Mic className="w-4 h-4 mr-2" />
                   Voice Practice Mode
                 </Button>
-                <Button variant="outline" size="sm" className="w-full justify-start">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start"
+                  onClick={() => toast({ title: "Video Prep", description: "Video interview preparation coming soon!" })}
+                >
                   <Video className="w-4 h-4 mr-2" />
                   Video Interview Prep
                 </Button>
-                <Button variant="outline" size="sm" className="w-full justify-start">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start"
+                  onClick={() => toast({ title: "Analytics", description: "Detailed performance analytics coming soon!" })}
+                >
                   <TrendingUp className="w-4 h-4 mr-2" />
                   Performance Analytics
                 </Button>

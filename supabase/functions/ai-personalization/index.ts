@@ -88,7 +88,12 @@ Return JSON array of 12 weeks with:
 Make each roadmap unique even for similar users.`;
 
   const aiResponse = await callOpenAI(prompt);
-  const roadmapWeeks = JSON.parse(aiResponse);
+  let roadmapWeeks = JSON.parse(aiResponse);
+  
+  // Ensure roadmapWeeks is always an array
+  if (!Array.isArray(roadmapWeeks)) {
+    roadmapWeeks = roadmapWeeks.weeks || [];
+  }
 
   // Clear existing roadmap
   await supabase.from('roadmap_weeks').delete().eq('user_id', userId);
