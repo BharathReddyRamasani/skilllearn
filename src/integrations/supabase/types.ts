@@ -52,23 +52,44 @@ export type Database = {
       }
       courses: {
         Row: {
+          category: string | null
           created_at: string
           description: string | null
+          duration_hours: number | null
           id: string
+          instructor: string | null
+          level: string | null
+          modules_count: number | null
+          rating: number | null
+          students_count: number | null
           title: string
           updated_at: string
         }
         Insert: {
+          category?: string | null
           created_at?: string
           description?: string | null
+          duration_hours?: number | null
           id?: string
+          instructor?: string | null
+          level?: string | null
+          modules_count?: number | null
+          rating?: number | null
+          students_count?: number | null
           title: string
           updated_at?: string
         }
         Update: {
+          category?: string | null
           created_at?: string
           description?: string | null
+          duration_hours?: number | null
           id?: string
+          instructor?: string | null
+          level?: string | null
+          modules_count?: number | null
+          rating?: number | null
+          students_count?: number | null
           title?: string
           updated_at?: string
         }
@@ -79,18 +100,21 @@ export type Database = {
           course_id: string
           created_at: string
           id: string
+          status: Database["public"]["Enums"]["enrollment_status"]
           user_id: string
         }
         Insert: {
           course_id: string
           created_at?: string
           id?: string
+          status?: Database["public"]["Enums"]["enrollment_status"]
           user_id: string
         }
         Update: {
           course_id?: string
           created_at?: string
           id?: string
+          status?: Database["public"]["Enums"]["enrollment_status"]
           user_id?: string
         }
         Relationships: [
@@ -99,6 +123,51 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "user_course_progress"
+            referencedColumns: ["course_id"]
+          },
+        ]
+      }
+      graph_recommendations: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          reason: string | null
+          score: number
+          skill_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          reason?: string | null
+          score: number
+          skill_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          reason?: string | null
+          score?: number
+          skill_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "graph_recommendations_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
             referencedColumns: ["id"]
           },
         ]
@@ -293,11 +362,19 @@ export type Database = {
             referencedRelation: "courses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "modules_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "user_course_progress"
+            referencedColumns: ["course_id"]
+          },
         ]
       }
       profiles: {
         Row: {
           avatar_url: string | null
+          bio: string | null
           created_at: string
           full_name: string | null
           id: string
@@ -305,6 +382,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           full_name?: string | null
           id: string
@@ -312,12 +390,48 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           full_name?: string | null
           id?: string
           updated_at?: string
         }
         Relationships: []
+      }
+      questions: {
+        Row: {
+          correct_answer: string
+          created_at: string
+          id: string
+          module_id: string
+          options: Json
+          question_text: string
+        }
+        Insert: {
+          correct_answer: string
+          created_at?: string
+          id?: string
+          module_id: string
+          options: Json
+          question_text: string
+        }
+        Update: {
+          correct_answer?: string
+          created_at?: string
+          id?: string
+          module_id?: string
+          options?: Json
+          question_text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questions_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "modules"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       roadmap_weeks: {
         Row: {
@@ -361,6 +475,123 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           week_number?: number
+        }
+        Relationships: []
+      }
+      skill_cluster_mapping: {
+        Row: {
+          cluster_id: string
+          skill_id: string
+        }
+        Insert: {
+          cluster_id: string
+          skill_id: string
+        }
+        Update: {
+          cluster_id?: string
+          skill_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skill_cluster_mapping_cluster_id_fkey"
+            columns: ["cluster_id"]
+            isOneToOne: false
+            referencedRelation: "skill_clusters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "skill_cluster_mapping_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      skill_clusters: {
+        Row: {
+          career_path: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          career_path?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          career_path?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      skill_dependencies: {
+        Row: {
+          prerequisite_id: string
+          skill_id: string
+          weight: number | null
+        }
+        Insert: {
+          prerequisite_id: string
+          skill_id: string
+          weight?: number | null
+        }
+        Update: {
+          prerequisite_id?: string
+          skill_id?: string
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skill_dependencies_prerequisite_id_fkey"
+            columns: ["prerequisite_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "skill_dependencies_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      skills: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          difficulty: number
+          estimated_hours: number | null
+          id: string
+          name: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          difficulty: number
+          estimated_hours?: number | null
+          id?: string
+          name: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          difficulty?: number
+          estimated_hours?: number | null
+          id?: string
+          name?: string
         }
         Relationships: []
       }
@@ -439,7 +670,7 @@ export type Database = {
       user_preferences: {
         Row: {
           active_hours: string[] | null
-          career_focus: string | null
+          career_focuses: string[] | null
           created_at: string | null
           experience_level: string | null
           id: string
@@ -451,7 +682,7 @@ export type Database = {
         }
         Insert: {
           active_hours?: string[] | null
-          career_focus?: string | null
+          career_focuses?: string[] | null
           created_at?: string | null
           experience_level?: string | null
           id?: string
@@ -463,7 +694,7 @@ export type Database = {
         }
         Update: {
           active_hours?: string[] | null
-          career_focus?: string | null
+          career_focuses?: string[] | null
           created_at?: string | null
           experience_level?: string | null
           id?: string
@@ -474,6 +705,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_skill_graph: {
+        Row: {
+          created_at: string
+          id: string
+          is_unlocked: boolean | null
+          last_practiced: string | null
+          mastery_level: number | null
+          reinforcement_count: number | null
+          skill_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_unlocked?: boolean | null
+          last_practiced?: string | null
+          mastery_level?: number | null
+          reinforcement_count?: number | null
+          skill_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_unlocked?: boolean | null
+          last_practiced?: string | null
+          mastery_level?: number | null
+          reinforcement_count?: number | null
+          skill_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_skill_graph_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_skills: {
         Row: {
@@ -567,13 +842,30 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      user_course_progress: {
+        Row: {
+          completed_lessons: number | null
+          course_description: string | null
+          course_id: string | null
+          course_title: string | null
+          progress_percentage: number | null
+          status: Database["public"]["Enums"]["enrollment_status"] | null
+          total_lessons: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      [_ in never]: never
+      increment_courses_completed: {
+        Args: { user_id_param: string }
+        Returns: undefined
+      }
     }
     Enums: {
+      enrollment_status: "in_progress" | "completed"
       lesson_status: "not_started" | "in_progress" | "completed"
+      quiz_type: "module_quiz" | "final_exam"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -701,7 +993,9 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      enrollment_status: ["in_progress", "completed"],
       lesson_status: ["not_started", "in_progress", "completed"],
+      quiz_type: ["module_quiz", "final_exam"],
     },
   },
 } as const
