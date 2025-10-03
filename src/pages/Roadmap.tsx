@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Navigation from "@/components/Navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,9 @@ import {
   Loader2
 } from "lucide-react";
 import { usePersonalizedData } from "@/hooks/usePersonalizedData";
+import { RoadmapGenerationDialog, RoadmapFormData } from "@/components/RoadmapGenerationDialog";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Roadmap = () => {
   const { 
@@ -27,8 +31,12 @@ const Roadmap = () => {
     roadmapWeeks, 
     goals,
     loading, 
-    generatePersonalizedRoadmap 
+    refreshData
   } = usePersonalizedData();
+  
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const { toast } = useToast();
 
   if (loading) {
     return (
@@ -59,6 +67,39 @@ const Roadmap = () => {
   const totalWeeks = roadmapWeeks?.length || 12;
   const progress = totalWeeks > 0 ? (completedWeeks / totalWeeks) * 100 : 0;
 
+  const handleGenerateRoadmap = async (formData: RoadmapFormData) => {
+    if (!user) return;
+    
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-personalization', {
+        body: {
+          userId: user.id,
+          action: 'generate_roadmap',
+          data: formData
+        }
+      });
+
+      if (error) throw error;
+      
+      await refreshData();
+      setDialogOpen(false);
+      toast({
+        title: "Success!",
+        description: "Your personalized roadmap has been generated successfully!",
+      });
+    } catch (error) {
+      console.error('Error generating roadmap:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate roadmap. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
@@ -78,7 +119,7 @@ const Roadmap = () => {
             </div>
             <Button 
               className="hero-gradient text-white shadow-primary"
-              onClick={generatePersonalizedRoadmap}
+              onClick={() => setDialogOpen(true)}
             >
               <Sparkles className="w-4 h-4 mr-2" />
               {hasRoadmap ? 'Regenerate Roadmap' : 'Generate Roadmap'}
@@ -308,7 +349,7 @@ const Roadmap = () => {
                   </p>
                   <Button 
                     className="hero-gradient text-white"
-                    onClick={generatePersonalizedRoadmap}
+                    onClick={() => setDialogOpen(true)}
                   >
                     <Sparkles className="w-4 h-4 mr-2" />
                     Generate My Roadmap
@@ -331,6 +372,13 @@ const Roadmap = () => {
           </div>
         </div>
       </div>
+
+      <RoadmapGenerationDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onGenerate={handleGenerateRoadmap}
+        isGenerating={isGenerating}
+      />
     </div>
   );
 };

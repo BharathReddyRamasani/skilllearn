@@ -23,12 +23,14 @@ import {
   RefreshCw
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { usePersonalizedData } from "@/hooks/usePersonalizedData";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { SkillGraphVisualization } from "@/components/SkillGraphVisualization";
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const {
     user,
     userStats,
@@ -513,7 +515,7 @@ const Dashboard = () => {
                   size="sm" 
                   variant="outline" 
                   className="mt-3"
-                  onClick={() => toast({ title: "Achievements", description: "Achievements feature coming soon!" })}
+                  onClick={() => navigate('/achievements')}
                 >
                   <Star className="h-3 w-3 mr-1" />
                   View All

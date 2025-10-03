@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import { Brain, Lock, CheckCircle, Clock, TrendingUp } from "lucide-react";
+import { Brain, Lock, CheckCircle, Clock, TrendingUp, BookOpen, ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import * as d3 from "d3";
 
 interface SkillNode {
@@ -36,6 +37,7 @@ export const SkillGraphVisualization = ({
   recommendations = []
 }: SkillGraphProps) => {
   const svgRef = useRef<SVGSVGElement>(null);
+  const navigate = useNavigate();
   const [selectedNode, setSelectedNode] = useState<SkillNode | null>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
 
@@ -63,10 +65,10 @@ export const SkillGraphVisualization = ({
 
     const { width, height } = dimensions;
 
-    // Create color scale for mastery
+    // Create color scale for mastery - professional gradient
     const colorScale = d3.scaleSequential()
       .domain([0, 100])
-      .interpolator(d3.interpolateRgb("#ef4444", "#22c55e"));
+      .interpolator(d3.interpolateRgb("#8b5cf6", "#22c55e"));
 
     // Create simulation
     const simulation = d3.forceSimulation(nodes as any)
@@ -76,6 +78,17 @@ export const SkillGraphVisualization = ({
       .force("charge", d3.forceManyBody().strength(-300))
       .force("center", d3.forceCenter(width / 2, height / 2))
       .force("collision", d3.forceCollide().radius(40));
+
+    // Add glow filter definition
+    const defs = svg.append("defs");
+    const filter = defs.append("filter")
+      .attr("id", "glow");
+    filter.append("feGaussianBlur")
+      .attr("stdDeviation", "4")
+      .attr("result", "coloredBlur");
+    const feMerge = filter.append("feMerge");
+    feMerge.append("feMergeNode").attr("in", "coloredBlur");
+    feMerge.append("feMergeNode").attr("in", "SourceGraphic");
 
     // Create container group
     const container = svg.append("g");
@@ -108,22 +121,33 @@ export const SkillGraphVisualization = ({
         .on("drag", dragged)
         .on("end", dragended) as any);
 
-    // Add circles for nodes
+    // Add circles for nodes with glow effect
     node.append("circle")
-      .attr("r", (d: any) => d.is_unlocked ? 25 : 20)
+      .attr("r", (d: any) => d.is_unlocked ? 30 : 25)
       .attr("fill", (d: any) => {
-        if (!d.is_unlocked) return "#94a3b8";
+        if (!d.is_unlocked) return "hsl(var(--muted))";
         return colorScale(d.mastery);
       })
       .attr("stroke", (d: any) => {
         const isRecommended = recommendations.some(r => r.skill_id === d.id);
-        return isRecommended ? "#8b5cf6" : "#fff";
+        return isRecommended ? "hsl(var(--primary))" : "hsl(var(--background))";
       })
       .attr("stroke-width", (d: any) => {
         const isRecommended = recommendations.some(r => r.skill_id === d.id);
-        return isRecommended ? 4 : 2;
+        return isRecommended ? 5 : 3;
+      })
+      .attr("filter", (d: any) => {
+        const isRecommended = recommendations.some(r => r.skill_id === d.id);
+        return isRecommended ? "url(#glow)" : "none";
       })
       .style("cursor", "pointer")
+      .style("transition", "all 0.3s ease")
+      .on("mouseover", function() {
+        d3.select(this).attr("r", (d: any) => d.is_unlocked ? 35 : 30);
+      })
+      .on("mouseout", function() {
+        d3.select(this).attr("r", (d: any) => d.is_unlocked ? 30 : 25);
+      })
       .on("click", (event, d: any) => {
         setSelectedNode(d);
         if (onNodeClick) onNodeClick(d);
@@ -183,29 +207,29 @@ export const SkillGraphVisualization = ({
 
   return (
     <div className="space-y-4">
-      <Card className="p-6">
+      <Card className="p-6 bg-gradient-to-br from-background via-primary/5 to-accent/5 border-primary/20">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold flex items-center">
-            <Brain className="w-5 h-5 mr-2 text-primary" />
+          <h3 className="text-2xl font-bold flex items-center bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            <Brain className="w-6 h-6 mr-2 text-primary animate-pulse" />
             Interactive Skill Graph
           </h3>
           <div className="flex gap-2">
-            <Badge variant="outline" className="flex items-center gap-1">
-              <CheckCircle className="w-3 h-3 text-green-500" />
+            <Badge variant="secondary" className="flex items-center gap-1 bg-success/20 text-success-foreground">
+              <CheckCircle className="w-3 h-3" />
               Mastered
             </Badge>
-            <Badge variant="outline" className="flex items-center gap-1">
-              <Lock className="w-3 h-3 text-gray-500" />
+            <Badge variant="secondary" className="flex items-center gap-1 bg-muted">
+              <Lock className="w-3 h-3" />
               Locked
             </Badge>
-            <Badge variant="outline" className="flex items-center gap-1">
-              <TrendingUp className="w-3 h-3 text-purple-500" />
+            <Badge variant="secondary" className="flex items-center gap-1 bg-primary/20 text-primary-foreground">
+              <TrendingUp className="w-3 h-3" />
               Recommended
             </Badge>
           </div>
         </div>
         
-        <div className="border rounded-lg overflow-hidden bg-background/50">
+        <div className="border-2 border-primary/20 rounded-xl overflow-hidden bg-gradient-to-br from-background/80 to-muted/50 shadow-lg">
           <svg
             ref={svgRef}
             width={dimensions.width}
@@ -214,10 +238,10 @@ export const SkillGraphVisualization = ({
           />
         </div>
 
-        <div className="mt-4 text-sm text-muted-foreground flex items-center gap-4">
-          <span>💡 Click nodes to view details</span>
-          <span>🖱️ Drag to rearrange</span>
-          <span>🔍 Scroll to zoom</span>
+        <div className="mt-4 text-sm flex items-center justify-center gap-6 p-3 bg-muted/50 rounded-lg">
+          <span className="flex items-center gap-2">💡 <strong>Click</strong> nodes to explore</span>
+          <span className="flex items-center gap-2">🖱️ <strong>Drag</strong> to reorganize</span>
+          <span className="flex items-center gap-2">🔍 <strong>Scroll</strong> to zoom</span>
         </div>
       </Card>
 
@@ -268,10 +292,20 @@ export const SkillGraphVisualization = ({
           )}
 
           <div className="mt-4 flex gap-2">
-            <Button className="flex-1" disabled={!selectedNode.is_unlocked || selectedNode.mastery >= 100}>
+            <Button 
+              className="flex-1" 
+              disabled={!selectedNode.is_unlocked || selectedNode.mastery >= 100}
+              onClick={() => navigate('/courses')}
+            >
+              <BookOpen className="w-4 h-4 mr-2" />
               Start Learning
             </Button>
-            <Button variant="outline" disabled={!selectedNode.is_unlocked}>
+            <Button 
+              variant="outline" 
+              disabled={!selectedNode.is_unlocked}
+              onClick={() => navigate('/courses')}
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
               View Resources
             </Button>
           </div>

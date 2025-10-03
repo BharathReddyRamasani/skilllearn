@@ -11,6 +11,7 @@ import JobMatch from "./pages/JobMatch";
 import Courses from "./pages/Courses";
 import CourseDetail from "./pages/CourseDetail";
 import MockInterview from "./pages/MockInterview";
+import Achievements from "./pages/Achievements";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import RequireAuth from "./components/RequireAuth";
@@ -33,6 +34,7 @@ const App = () => (
           <Route path="/courses" element={<RequireAuth><Courses /></RequireAuth>} />
           <Route path="/courses/:id" element={<RequireAuth><CourseDetail /></RequireAuth>} />
           <Route path="/interview" element={<RequireAuth><MockInterview /></RequireAuth>} />
+          <Route path="/achievements" element={<RequireAuth><Achievements /></RequireAuth>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
