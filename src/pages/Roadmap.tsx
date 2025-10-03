@@ -82,12 +82,23 @@ const Roadmap = () => {
 
       if (error) throw error;
       
+      // Refresh data and close dialog
       await refreshData();
       setDialogOpen(false);
+      
+      // Show success message
       toast({
         title: "Success!",
         description: "Your personalized roadmap has been generated successfully!",
       });
+
+      // Scroll to roadmap section after a short delay
+      setTimeout(() => {
+        const roadmapSection = document.querySelector('.weekly-roadmap-section');
+        if (roadmapSection) {
+          roadmapSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 500);
     } catch (error) {
       console.error('Error generating roadmap:', error);
       toast({
@@ -227,7 +238,7 @@ const Roadmap = () => {
           </div>
 
           {/* Weekly Roadmap */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 weekly-roadmap-section">
             <Card className="learning-card p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-semibold">Weekly Learning Path</h2>
