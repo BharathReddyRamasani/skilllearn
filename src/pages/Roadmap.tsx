@@ -17,7 +17,9 @@ import {
   Trophy,
   Calendar,
   Zap,
-  Loader2
+  Loader2,
+  Download,
+  FileText
 } from "lucide-react";
 import { usePersonalizedData } from "@/hooks/usePersonalizedData";
 import { RoadmapGenerationDialog, RoadmapFormData } from "@/components/RoadmapGenerationDialog";
@@ -82,23 +84,25 @@ const Roadmap = () => {
 
       if (error) throw error;
       
-      // Refresh data and close dialog
-      await refreshData();
+      // Close dialog first
       setDialogOpen(false);
+      
+      // Refresh data
+      await refreshData();
       
       // Show success message
       toast({
-        title: "Success!",
-        description: "Your personalized roadmap has been generated successfully!",
+        title: "🎉 Roadmap Generated!",
+        description: "Your personalized learning path is ready. Scroll down to view it.",
       });
 
-      // Scroll to roadmap section after a short delay
+      // Scroll to roadmap section after data is refreshed
       setTimeout(() => {
         const roadmapSection = document.querySelector('.weekly-roadmap-section');
         if (roadmapSection) {
           roadmapSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
-      }, 500);
+      }, 800);
     } catch (error) {
       console.error('Error generating roadmap:', error);
       toast({
@@ -109,6 +113,61 @@ const Roadmap = () => {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleDownloadRoadmap = () => {
+    if (!roadmapWeeks || roadmapWeeks.length === 0) {
+      toast({
+        title: "No Roadmap",
+        description: "Generate a roadmap first to download it.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Create markdown content
+    let markdown = `# ${currentGoal?.title || 'Personalized Career Roadmap'}\n\n`;
+    markdown += `${currentGoal?.description || 'AI-Generated Learning Journey'}\n\n`;
+    markdown += `**Progress:** ${completedWeeks}/${totalWeeks} weeks completed (${Math.round(progress)}%)\n\n`;
+    markdown += `**Placement Readiness:** ${placementReadiness}%\n\n`;
+    markdown += `---\n\n`;
+
+    roadmapWeeks.forEach((week) => {
+      markdown += `## Week ${week.week_number}: ${week.title}\n\n`;
+      markdown += `**Status:** ${week.status}\n\n`;
+      markdown += `**Description:** ${week.description}\n\n`;
+      markdown += `**Estimated Hours:** ${week.estimated_hours}\n\n`;
+      
+      if (week.topics && week.topics.length > 0) {
+        markdown += `**Topics:**\n`;
+        week.topics.forEach((topic: string) => {
+          markdown += `- ${topic}\n`;
+        });
+        markdown += `\n`;
+      }
+
+      if (week.skills_focus && week.skills_focus.length > 0) {
+        markdown += `**Skills Focus:** ${week.skills_focus.join(', ')}\n\n`;
+      }
+
+      markdown += `---\n\n`;
+    });
+
+    // Create blob and download
+    const blob = new Blob([markdown], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `career-roadmap-${new Date().toISOString().split('T')[0]}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Downloaded!",
+      description: "Your roadmap has been downloaded as a markdown file.",
+    });
   };
 
   return (
@@ -242,11 +301,23 @@ const Roadmap = () => {
             <Card className="learning-card p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-semibold">Weekly Learning Path</h2>
-                <div className="flex items-center space-x-2">
-                  <Calendar className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
-                    Updated daily by AI
-                  </span>
+                <div className="flex items-center space-x-3">
+                  {hasRoadmap && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleDownloadRoadmap}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download Roadmap
+                    </Button>
+                  )}
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="w-5 h-5 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Updated daily by AI
+                    </span>
+                  </div>
                 </div>
               </div>
 
