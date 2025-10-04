@@ -169,7 +169,7 @@ const MockInterview = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-purple-50 to-blue-50 dark:via-purple-950/20 dark:to-blue-950/20 animate-fade-in">
       <Navigation />
       
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">

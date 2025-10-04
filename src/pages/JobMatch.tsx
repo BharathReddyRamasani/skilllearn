@@ -87,7 +87,7 @@ const JobMatch = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-primary/5 animate-fade-in">
       <Navigation />
       
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">

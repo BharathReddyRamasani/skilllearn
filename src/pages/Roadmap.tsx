@@ -87,22 +87,22 @@ const Roadmap = () => {
       // Close dialog first
       setDialogOpen(false);
       
-      // Refresh data
-      await refreshData();
-      
       // Show success message
       toast({
         title: "🎉 Roadmap Generated!",
         description: "Your personalized learning path is ready. Scroll down to view it.",
       });
+      
+      // Refresh data first
+      await refreshData();
 
-      // Scroll to roadmap section after data is refreshed
+      // Wait a bit longer and scroll to roadmap section
       setTimeout(() => {
         const roadmapSection = document.querySelector('.weekly-roadmap-section');
         if (roadmapSection) {
           roadmapSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
-      }, 800);
+      }, 1200);
     } catch (error) {
       console.error('Error generating roadmap:', error);
       toast({
@@ -171,7 +171,7 @@ const Roadmap = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/5 animate-fade-in">
       <Navigation />
       
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">

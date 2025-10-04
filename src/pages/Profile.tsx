@@ -24,9 +24,11 @@ import { usePersonalizedData } from "@/hooks/usePersonalizedData";
 import { SkillGraphVisualization } from "@/components/SkillGraphVisualization";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { EditProfileDialog } from "@/components/EditProfileDialog";
 
 const Profile = () => {
   const { toast } = useToast();
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const { 
     user, 
     userStats, 
@@ -86,7 +88,7 @@ const Profile = () => {
   const placementReadiness = userStats?.placement_readiness || 0;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-primary/10 animate-fade-in">
       <Navigation />
       
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
@@ -129,7 +131,7 @@ const Profile = () => {
                 <Button 
                   className="w-full mt-6" 
                   variant="outline"
-                  onClick={() => toast({ title: "Edit Profile", description: "Profile editing feature coming soon!" })}
+                  onClick={() => setEditDialogOpen(true)}
                 >
                   <Edit className="w-4 h-4 mr-2" />
                   Edit Profile
@@ -278,6 +280,14 @@ const Profile = () => {
           </div>
         </div>
       </div>
+
+      {/* Edit Profile Dialog */}
+      <EditProfileDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        currentEmail={user?.email}
+        onProfileUpdated={loadGraphData}
+      />
     </div>
   );
 };
