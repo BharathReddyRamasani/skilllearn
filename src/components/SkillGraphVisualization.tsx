@@ -48,6 +48,10 @@ export const SkillGraphVisualization = ({
     if (onNodeClick) onNodeClick(node);
   };
 
+  const totalSkills = nodes.length;
+  const masteredSkills = nodes.filter(n => n.mastery >= 80).length;
+  const overallProgress = totalSkills > 0 ? Math.round((nodes.reduce((sum, n) => sum + (n.is_unlocked ? n.mastery : 0), 0) / totalSkills)) : 0;
+
   // Group skills by category for a more personalized view
   const skillsByCategory = nodes.reduce((acc, skill) => {
     const category = skill.category || "Other";
@@ -111,10 +115,6 @@ export const SkillGraphVisualization = ({
     if (node.mastery >= 50) return { label: "Completed", variant: "secondary" as const };
     return { label: "To-Do", variant: "outline" as const };
   };
-
-  const totalSkills = nodes.length;
-  const masteredSkills = nodes.filter(n => n.mastery >= 80).length;
-  const overallProgress = totalSkills > 0 ? Math.round((nodes.reduce((sum, n) => sum + (n.is_unlocked ? n.mastery : 0), 0) / totalSkills)) : 0;
 
   return (
     <div className="space-y-6 animate-fade-in">
