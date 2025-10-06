@@ -48,64 +48,45 @@ export const SkillGraphVisualization = ({
     if (onNodeClick) onNodeClick(node);
   };
 
-  // Categorize skills into 5 career stages
-  const stages = [
-    {
-      id: 1,
-      title: "Foundation",
-      subtitle: "Stage 1",
-      description: "Acquiring initial skills and experience",
-      icon: GraduationCap,
-      color: "from-cyan-400 to-blue-500",
-      bgColor: "bg-cyan-50 dark:bg-cyan-950/30",
-      borderColor: "border-cyan-500",
-      skills: nodes.filter(n => n.difficulty <= 2),
-    },
-    {
-      id: 2,
-      title: "Early Professional",
-      subtitle: "Stage 2",
-      description: "Enhancing job-specific skills and expertise",
-      icon: Target,
-      color: "from-blue-500 to-purple-500",
-      bgColor: "bg-blue-50 dark:bg-blue-950/30",
-      borderColor: "border-blue-500",
-      skills: nodes.filter(n => n.difficulty > 2 && n.difficulty <= 4),
-    },
-    {
-      id: 3,
-      title: "Advancement",
-      subtitle: "Stage 3",
-      description: "Taking on more responsibility and complex projects",
-      icon: Zap,
-      color: "from-purple-500 to-pink-500",
-      bgColor: "bg-purple-50 dark:bg-purple-950/30",
-      borderColor: "border-purple-500",
-      skills: nodes.filter(n => n.difficulty > 4 && n.difficulty <= 6),
-    },
-    {
-      id: 4,
-      title: "Leadership",
-      subtitle: "Stage 4",
-      description: "Driving strategic decisions and leading teams",
-      icon: Crown,
-      color: "from-pink-500 to-orange-500",
-      bgColor: "bg-pink-50 dark:bg-pink-950/30",
-      borderColor: "border-pink-500",
-      skills: nodes.filter(n => n.difficulty > 6 && n.difficulty <= 8),
-    },
-    {
-      id: 5,
-      title: "Influence",
-      subtitle: "Stage 5",
-      description: "Shaping the organization and industry standards",
-      icon: Trophy,
-      color: "from-orange-500 to-yellow-500",
-      bgColor: "bg-orange-50 dark:bg-orange-950/30",
-      borderColor: "border-orange-500",
-      skills: nodes.filter(n => n.difficulty > 8),
-    },
-  ];
+  // Group skills by category for a more personalized view
+  const skillsByCategory = nodes.reduce((acc, skill) => {
+    const category = skill.category || "Other";
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(skill);
+    return acc;
+  }, {} as Record<string, SkillNode[]>);
+
+  // Calculate category progress
+  const categoryStats = Object.entries(skillsByCategory).map(([category, skills]) => {
+    const totalSkills = skills.length;
+    const masteredSkills = skills.filter(s => s.mastery >= 80).length;
+    const inProgressSkills = skills.filter(s => s.mastery > 0 && s.mastery < 80).length;
+    const lockedSkills = skills.filter(s => !s.is_unlocked).length;
+    const avgMastery = skills.reduce((sum, s) => sum + (s.is_unlocked ? s.mastery : 0), 0) / totalSkills;
+    
+    return {
+      category,
+      skills,
+      totalSkills,
+      masteredSkills,
+      inProgressSkills,
+      lockedSkills,
+      avgMastery: Math.round(avgMastery),
+    };
+  }).sort((a, b) => b.avgMastery - a.avgMastery);
+
+  // Determine career progress level
+  const getProgressLevel = () => {
+    if (overallProgress >= 80) return { label: "Expert", color: "from-yellow-500 to-orange-500", icon: Trophy };
+    if (overallProgress >= 60) return { label: "Advanced", color: "from-purple-500 to-pink-500", icon: Crown };
+    if (overallProgress >= 40) return { label: "Intermediate", color: "from-blue-500 to-purple-500", icon: Zap };
+    if (overallProgress >= 20) return { label: "Developing", color: "from-cyan-500 to-blue-500", icon: Target };
+    return { label: "Beginner", color: "from-green-500 to-cyan-500", icon: GraduationCap };
+  };
+
+  const progressLevel = getProgressLevel();
 
   // Filter nodes based on active filter
   const getFilteredNodes = (stageSkills: SkillNode[]) => {
@@ -140,15 +121,26 @@ export const SkillGraphVisualization = ({
       <Card className="p-6 learning-card bg-gradient-to-br from-background via-primary/5 to-accent/5 border-primary/20">
         {/* Header Section */}
         <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
+            <div className="flex-1">
               <h3 className="text-3xl font-bold flex items-center mb-2">
                 <Brain className="w-8 h-8 mr-3 text-primary ai-pulse" />
-                5-Stages Career Development Journey
+                Your Learning Journey
               </h3>
               <p className="text-muted-foreground">
-                Career development is an ongoing journey of self-assessment, skill acquisition, and navigating opportunities
+                Track your progress and master skills aligned with your career goals
               </p>
+            </div>
+            
+            {/* Progress Level Badge */}
+            <div className={`px-6 py-4 rounded-xl bg-gradient-to-r ${progressLevel.color} text-white shadow-lg`}>
+              <div className="flex items-center gap-3">
+                <progressLevel.icon className="w-8 h-8" />
+                <div>
+                  <div className="text-sm font-medium opacity-90">Current Level</div>
+                  <div className="text-2xl font-bold">{progressLevel.label}</div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -212,101 +204,100 @@ export const SkillGraphVisualization = ({
           </div>
         </div>
 
-        {/* 5-Stage Journey Visualization */}
-        <div className="relative">
-          {/* Connection Line */}
-          <div className="absolute top-24 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500 via-purple-500 to-yellow-500 opacity-20 hidden lg:block" />
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-            {stages.map((stage, stageIndex) => {
-              const filteredSkills = getFilteredNodes(stage.skills);
-              const stageProgress = stage.skills.length > 0 
-                ? Math.round((stage.skills.reduce((sum, n) => sum + n.mastery, 0) / stage.skills.length))
-                : 0;
+        {/* Skills by Category */}
+        <div className="space-y-6">
+          {categoryStats.map((category, idx) => {
+            const filteredSkills = getFilteredNodes(category.skills);
+            
+            if (filteredSkills.length === 0) return null;
 
-              return (
-                <div key={stage.id} className="relative animate-scale-in" style={{ animationDelay: `${stageIndex * 100}ms` }}>
-                  {/* Stage Card */}
-                  <div className={`${stage.bgColor} border-2 ${stage.borderColor} rounded-2xl p-6 shadow-card hover:shadow-elevated transition-all relative overflow-hidden`}>
-                    {/* Stage Icon Circle */}
-                    <div className={`w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-r ${stage.color} flex items-center justify-center shadow-lg relative z-10`}>
-                      <stage.icon className="w-10 h-10 text-white" />
-                    </div>
-
-                    {/* Arrow Connector */}
-                    {stageIndex < stages.length - 1 && (
-                      <div className="hidden lg:block absolute -right-4 top-20 z-20">
-                        <div className={`w-8 h-8 bg-gradient-to-r ${stage.color} rounded-full flex items-center justify-center shadow-lg`}>
-                          <span className="text-white text-xl">→</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Stage Info */}
-                    <div className="text-center mb-4">
-                      <Badge className={`bg-gradient-to-r ${stage.color} text-white mb-2`}>
-                        {stage.subtitle}
-                      </Badge>
-                      <h4 className="text-xl font-bold mb-2">{stage.title}</h4>
-                      <p className="text-xs text-muted-foreground mb-3">
-                        {stage.description}
-                      </p>
-                      
-                      {/* Progress */}
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">Progress</span>
-                          <span className="font-semibold">{stageProgress}%</span>
-                        </div>
-                        <Progress value={stageProgress} className="h-2" />
-                      </div>
-                    </div>
-
-                    {/* Skills in Stage */}
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {filteredSkills.length > 0 ? (
-                        filteredSkills.map((skill) => {
-                          const status = getSkillStatus(skill);
-                          return (
-                            <button
-                              key={skill.id}
-                              onClick={() => handleNodeClick(skill)}
-                              className="w-full text-left p-3 bg-background/60 hover:bg-background rounded-lg border border-border hover:border-primary transition-all group"
-                            >
-                              <div className="flex items-center justify-between mb-1">
-                                <div className="flex items-center space-x-2 flex-1">
-                                  <span className="text-lg">{getSkillIcon(skill)}</span>
-                                  <span className="font-medium text-sm truncate group-hover:text-primary transition-colors">
-                                    {skill.name}
-                                  </span>
-                                </div>
-                                <Badge variant={status.variant} className="text-xs shrink-0">
-                                  {status.label}
-                                </Badge>
-                              </div>
-                              <Progress value={skill.mastery} className="h-1.5" />
-                            </button>
-                          );
-                        })
-                      ) : (
-                        <p className="text-xs text-center text-muted-foreground py-4">
-                          {activeFilter !== "all" ? "No skills match this filter" : "No skills in this stage yet"}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Stage Stats */}
-                    <div className="mt-4 pt-4 border-t border-border">
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>{filteredSkills.length} skills</span>
-                        <span>{filteredSkills.filter(s => s.mastery >= 80).length} mastered</span>
-                      </div>
+            return (
+              <div 
+                key={category.category} 
+                className="animate-scale-in bg-gradient-to-br from-background to-muted/30 rounded-2xl p-6 border-2 border-primary/20 shadow-card hover:shadow-elevated transition-all"
+                style={{ animationDelay: `${idx * 100}ms` }}
+              >
+                {/* Category Header */}
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
+                  <div className="flex-1">
+                    <h4 className="text-2xl font-bold mb-1">{category.category}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {category.masteredSkills} mastered • {category.inProgressSkills} in progress • {category.lockedSkills} locked
+                    </p>
+                  </div>
+                  
+                  {/* Category Progress Circle */}
+                  <div className="relative w-24 h-24">
+                    <svg className="transform -rotate-90 w-24 h-24">
+                      <circle
+                        cx="48"
+                        cy="48"
+                        r="40"
+                        stroke="currentColor"
+                        strokeWidth="8"
+                        fill="transparent"
+                        className="text-muted"
+                      />
+                      <circle
+                        cx="48"
+                        cy="48"
+                        r="40"
+                        stroke="currentColor"
+                        strokeWidth="8"
+                        fill="transparent"
+                        strokeDasharray={`${2 * Math.PI * 40}`}
+                        strokeDashoffset={`${2 * Math.PI * 40 * (1 - category.avgMastery / 100)}`}
+                        className="text-primary transition-all duration-1000"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-xl font-bold">{category.avgMastery}%</span>
                     </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+
+                {/* Skills Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {filteredSkills.map((skill) => {
+                    const status = getSkillStatus(skill);
+                    return (
+                      <button
+                        key={skill.id}
+                        onClick={() => handleNodeClick(skill)}
+                        className="text-left p-4 bg-background/60 hover:bg-background rounded-xl border border-border hover:border-primary transition-all group"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center space-x-2 flex-1">
+                            <span className="text-2xl">{getSkillIcon(skill)}</span>
+                            <span className="font-semibold text-sm group-hover:text-primary transition-colors">
+                              {skill.name}
+                            </span>
+                          </div>
+                          <Badge variant={status.variant} className="text-xs shrink-0 ml-2">
+                            {status.label}
+                          </Badge>
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>Mastery</span>
+                            <span className="font-semibold">{skill.mastery}%</span>
+                          </div>
+                          <Progress value={skill.mastery} className="h-2" />
+                        </div>
+                        
+                        <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Lv {skill.difficulty}</span>
+                          <span>{skill.estimated_hours}h</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* Help Text */}
