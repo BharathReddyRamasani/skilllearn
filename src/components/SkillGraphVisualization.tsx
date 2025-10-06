@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -6,6 +6,8 @@ import { Brain, Lock, CheckCircle, Target, Zap, Star, BookOpen, GraduationCap, T
 import { useNavigate } from "react-router-dom";
 import { Progress } from "./ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface SkillNode {
   id: string;
@@ -40,8 +42,45 @@ export const SkillGraphVisualization = ({
   recommendations = []
 }: SkillGraphProps) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [selectedNode, setSelectedNode] = useState<SkillNode | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
+  const [userCourseProgress, setUserCourseProgress] = useState<any[]>([]);
+  const [isLoadingProgress, setIsLoadingProgress] = useState(true);
+
+  // Fetch user's actual course progress
+  useEffect(() => {
+    const fetchUserProgress = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // Get user's course progress
+        const { data: progressData, error: progressError } = await supabase
+          .from('user_course_progress')
+          .select('*')
+          .eq('user_id', user.id);
+
+        if (progressError) throw progressError;
+        setUserCourseProgress(progressData || []);
+
+        // Get user's skill graph data
+        const { data: skillData, error: skillError } = await supabase
+          .from('user_skill_graph')
+          .select('*, skills(*)')
+          .eq('user_id', user.id);
+
+        if (skillError) throw skillError;
+        
+      } catch (error: any) {
+        console.error('Error fetching user progress:', error);
+      } finally {
+        setIsLoadingProgress(false);
+      }
+    };
+
+    fetchUserProgress();
+  }, []);
 
   const handleNodeClick = (node: SkillNode) => {
     setSelectedNode(node);
@@ -58,11 +97,51 @@ export const SkillGraphVisualization = ({
   const recentlyMastered = nodes.filter(n => n.mastery >= 80).length;
   const learningVelocity = recentlyMastered > 0 ? "High" : inProgressSkills > 3 ? "Medium" : "Getting Started";
 
-  // Get next skills to unlock
-  const nextSkills = nodes
-    .filter(n => !n.is_unlocked)
-    .sort((a, b) => a.difficulty - b.difficulty)
-    .slice(0, 3);
+  // Get next skills to unlock - DYNAMIC based on completed skills
+  const getSmartRecommendedSkills = () => {
+    // Get skills that are prerequisites for locked skills
+    const completedSkillIds = nodes.filter(n => n.mastery >= 80).map(n => n.id);
+    const inProgressSkillIds = nodes.filter(n => n.mastery > 0 && n.mastery < 80).map(n => n.id);
+    
+    // Find locked skills whose prerequisites are mostly completed
+    const lockedWithProgress = nodes
+      .filter(n => !n.is_unlocked)
+      .map(skill => {
+        // Check how many prerequisites this skill has from links
+        const prerequisites = links.filter(l => l.target === skill.id);
+        const completedPrereqs = prerequisites.filter(p => 
+          completedSkillIds.includes(p.source)
+        ).length;
+        
+        return {
+          skill,
+          prereqProgress: prerequisites.length > 0 ? completedPrereqs / prerequisites.length : 0,
+          totalPrereqs: prerequisites.length
+        };
+      })
+      .filter(item => item.prereqProgress > 0.5 || item.totalPrereqs === 0) // At least 50% prereqs done or no prereqs
+      .sort((a, b) => {
+        // Sort by prerequisite completion, then by difficulty
+        if (b.prereqProgress !== a.prereqProgress) {
+          return b.prereqProgress - a.prereqProgress;
+        }
+        return a.skill.difficulty - b.skill.difficulty;
+      })
+      .slice(0, 3)
+      .map(item => item.skill);
+
+    // If no smart recommendations, just show easiest locked skills
+    if (lockedWithProgress.length === 0) {
+      return nodes
+        .filter(n => !n.is_unlocked)
+        .sort((a, b) => a.difficulty - b.difficulty)
+        .slice(0, 3);
+    }
+
+    return lockedWithProgress;
+  };
+
+  const nextSkills = getSmartRecommendedSkills();
 
   // Get skills in progress
   const activeSkills = nodes
@@ -121,21 +200,8 @@ export const SkillGraphVisualization = ({
   return (
     <div className="space-y-6 animate-fade-in">
       <Card className="p-6 learning-card bg-gradient-to-br from-background via-primary/5 to-accent/5 border-primary/20">
-        {/* Career Goal Header */}
+        {/* Current Milestone Card */}
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <Rocket className="w-10 h-10 text-primary ai-pulse" />
-            <div>
-              <h3 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Your Career Journey
-              </h3>
-              <p className="text-muted-foreground mt-1">
-                Personalized path to achieving your career goals
-              </p>
-            </div>
-          </div>
-
-          {/* Current Milestone Card */}
           <div className={`relative overflow-hidden rounded-2xl p-8 bg-gradient-to-br ${milestone.color} shadow-elevated`}>
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32" />
             <div className="relative z-10">
@@ -211,42 +277,62 @@ export const SkillGraphVisualization = ({
             </div>
           </Card>
 
-          {/* Next Steps */}
+          {/* Next Steps - DYNAMIC */}
           <Card className="p-6 bg-gradient-to-br from-orange-500/10 to-pink-500/10 border-orange-500/20">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-3 rounded-xl bg-gradient-to-br from-orange-500 to-pink-500">
                 <Target className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h4 className="text-xl font-bold">Recommended Next Steps</h4>
-                <p className="text-sm text-muted-foreground">Skills to unlock next</p>
+                <h4 className="text-xl font-bold">Smart Recommendations</h4>
+                <p className="text-sm text-muted-foreground">
+                  {nextSkills.length > 0 ? "Skills recommended based on your progress" : "Keep learning to unlock more skills"}
+                </p>
               </div>
             </div>
 
             <div className="space-y-3">
               {nextSkills.length > 0 ? (
-                nextSkills.map((skill) => (
-                  <button
-                    key={skill.id}
-                    onClick={() => handleNodeClick(skill)}
-                    className="w-full text-left p-4 bg-background/80 hover:bg-background rounded-xl border border-border hover:border-primary transition-all group"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2 flex-1">
-                        <Lock className="w-4 h-4 text-muted-foreground" />
-                        <span className="font-semibold group-hover:text-primary transition-colors">{skill.name}</span>
+                nextSkills.map((skill) => {
+                  // Calculate readiness based on prerequisites
+                  const prerequisites = links.filter(l => l.target === skill.id);
+                  const completedPrereqs = prerequisites.filter(p => 
+                    nodes.find(n => n.id === p.source && n.mastery >= 80)
+                  ).length;
+                  const readinessPercent = prerequisites.length > 0 
+                    ? Math.round((completedPrereqs / prerequisites.length) * 100)
+                    : 100;
+
+                  return (
+                    <button
+                      key={skill.id}
+                      onClick={() => handleNodeClick(skill)}
+                      className="w-full text-left p-4 bg-background/80 hover:bg-background rounded-xl border border-border hover:border-primary transition-all group"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2 flex-1">
+                          <Lock className="w-4 h-4 text-muted-foreground" />
+                          <span className="font-semibold group-hover:text-primary transition-colors">{skill.name}</span>
+                        </div>
+                        <Badge variant="outline">Lv {skill.difficulty}</Badge>
                       </div>
-                      <Badge variant="outline">Lv {skill.difficulty}</Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {skill.estimated_hours}h to complete • {skill.category}
-                    </p>
-                  </button>
-                ))
+                      <div className="mb-2">
+                        <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                          <span>Readiness</span>
+                          <span className="font-semibold">{readinessPercent}%</span>
+                        </div>
+                        <Progress value={readinessPercent} className="h-1.5" />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {skill.estimated_hours}h to complete • {skill.category}
+                      </p>
+                    </button>
+                  );
+                })
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <CheckCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">All skills unlocked!</p>
+                  <p className="text-sm">All skills unlocked! Start learning to see personalized recommendations.</p>
                 </div>
               )}
             </div>
@@ -320,10 +406,9 @@ export const SkillGraphVisualization = ({
           <div className="flex items-start gap-3">
             <Sparkles className="w-5 h-5 text-primary mt-0.5 ai-pulse" />
             <div>
-              <h4 className="font-semibold mb-1">Interactive Journey Guide</h4>
+              <h4 className="font-semibold mb-1">AI-Powered Learning Path</h4>
               <p className="text-sm text-muted-foreground">
-                Click on any skill to view detailed information and start learning. Use the filter buttons above to view skills by status. 
-                Progress through each stage by mastering skills to advance your career!
+                Your recommendations update automatically as you complete skills. Complete {Math.max(0, Math.ceil(totalSkills * 0.2) - masteredSkills)} more skills to reach your next milestone!
               </p>
             </div>
           </div>
